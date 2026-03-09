@@ -6,9 +6,10 @@ const createError = (status, message) => {
   return err;
 };
 
-// Verify JWT token from Authorization header
+// Verify JWT token from Authorization header.
 export const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
+
   if (!authHeader?.startsWith('Bearer ')) {
     return next(createError(401, 'No token provided'));
   }
@@ -23,8 +24,14 @@ export const verifyToken = (req, res, next) => {
   }
 };
 
-// Role-based access control (use after verifyToken)
-export const requireRole = (...roles) => (req, res, next) => {
+// Role-based access control (use after verifyToken).
+// Can be called as: requireRole('admin', 'super-admin') or requireRole(['admin', 'super-admin']).
+export const requireRole = (...rolesArg) => (req, res, next) => {
+  let roles = rolesArg;
+  if (Array.isArray(rolesArg[0])) {
+    roles = rolesArg[0];
+  }
+
   if (!req.user || !roles.includes(req.user.role)) {
     return next(createError(403, 'Forbidden: insufficient role'));
   }

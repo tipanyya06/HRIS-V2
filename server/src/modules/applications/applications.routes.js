@@ -1,0 +1,55 @@
+import express from 'express';
+import * as applicationController from './applications.controller.js';
+import { verifyToken, requireRole } from '../../middleware/auth.js';
+import { formLimiter } from '../../middleware/rateLimiter.js';
+
+const router = express.Router();
+
+// Public routes
+router.post('/', formLimiter, applicationController.submitApplicationController);
+router.get('/', applicationController.validateCandidateByEmailController);
+
+// Admin routes (require JWT + role)
+router.get(
+  '/',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.getApplicationsController
+);
+
+router.get(
+  '/stats/by-stage',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.getApplicationsByStageController
+);
+
+router.get(
+  '/:id',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.getApplicationByIdController
+);
+
+router.patch(
+  '/:id/stage',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.updateStageController
+);
+
+router.post(
+  '/:id/notes',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.addNoteController
+);
+
+router.delete(
+  '/:id',
+  verifyToken,
+  requireRole(['admin', 'super-admin']),
+  applicationController.deleteApplicationController
+);
+
+export default router;

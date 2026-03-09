@@ -27,16 +27,26 @@ const format = winston.format.combine(
 );
 
 const transports = [
-  // Console transport
-  new winston.transports.Console(),
-  // Error file
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
+  // Console transport - always show
+  new winston.transports.Console({
+    level: 'debug',
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
+    ),
   }),
-  // Combined file
-  new winston.transports.File({ filename: 'logs/all.log' }),
 ];
+
+// Only add file transports in production
+if (process.env.NODE_ENV === 'production') {
+  transports.push(
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+    }),
+    new winston.transports.File({ filename: 'logs/all.log' })
+  );
+}
 
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'debug',

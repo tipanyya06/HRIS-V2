@@ -5,12 +5,16 @@ const interviewSchema = new mongoose.Schema(
     applicantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Applicant',
-      required: true,
     },
+    applicantEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+    },
+    receiverName: String,
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Job',
-      required: true,
     },
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
