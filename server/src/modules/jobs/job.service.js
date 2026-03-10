@@ -23,7 +23,7 @@ export const getPublicJobs = async (filters = {}) => {
     }
 
     const jobs = await Job.find(query)
-      .populate('postedBy', 'firstName lastName email')
+      .populate('postedBy', 'email personalInfo.givenName personalInfo.lastName role')
       .sort({ createdAt: -1 })
       .limit(50);
     
@@ -38,7 +38,7 @@ export const getPublicJobs = async (filters = {}) => {
 export const getAllJobs = async (adminId) => {
   try {
     const jobs = await Job.find()
-      .populate('postedBy', 'firstName lastName email')
+      .populate('postedBy', 'email personalInfo.givenName personalInfo.lastName role')
       .sort({ createdAt: -1 });
     
     return jobs || [];
@@ -51,7 +51,7 @@ export const getAllJobs = async (adminId) => {
 // Get single job by ID
 export const getJobById = async (jobId) => {
   const job = await Job.findById(jobId)
-    .populate('postedBy', 'firstName lastName email');
+    .populate('postedBy', 'email personalInfo.givenName personalInfo.lastName role');
   
   if (!job) {
     throw new Error('Job not found');
@@ -65,7 +65,7 @@ export const updateJob = async (jobId, updateData) => {
   const job = await Job.findByIdAndUpdate(jobId, updateData, {
     new: true,
     runValidators: true,
-  }).populate('postedBy', 'firstName lastName email');
+  }).populate('postedBy', 'email personalInfo.givenName personalInfo.lastName role');
   
   if (!job) {
     throw new Error('Job not found');

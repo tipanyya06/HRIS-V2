@@ -11,10 +11,16 @@
     "test:coverage": "vitest --coverage",
     "lint": "eslint src --ext .js"
   },
-  "keywords": ["hris", "ats", "hr", "recruitment"],
+  "keywords": [
+    "hris",
+    "ats",
+    "hr",
+    "recruitment"
+  ],
   "author": "Madison 88",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.31.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -25,15 +31,15 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
-    "winston": "^3.8.0",
-    "@supabase/supabase-js": "^2.31.0"
+    "multer": "^2.1.1",
+    "winston": "^3.8.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0",
-    "vitest": "^0.34.0",
-    "supertest": "^6.3.3",
     "@vitest/coverage-v8": "^0.34.0",
-    "eslint": "^8.45.0"
+    "eslint": "^8.45.0",
+    "nodemon": "^3.0.0",
+    "supertest": "^6.3.3",
+    "vitest": "^0.34.0"
   },
   "engines": {
     "node": ">=18.0.0"

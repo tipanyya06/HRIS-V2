@@ -13,6 +13,13 @@ import authRoutes from './modules/auth/auth.routes.js';
 import jobRoutes from './modules/jobs/job.routes.js';
 import applicationRoutes from './modules/applications/applications.routes.js';
 import interviewRoutes from './modules/interviews/interviews.routes.js';
+import employeeRoutes from './modules/employees/employees.routes.js';
+import reportsRouter from './modules/reports/reports.routes.js';
+import adminsRouter from './modules/admins/admins.routes.js';
+import logsRouter from './modules/logs/logs.routes.js';
+import requestsRouter from './modules/requests/requests.routes.js';
+import uploadRouter from './modules/upload/upload.routes.js';
+import announcementsRouter from './modules/announcements/announcements.routes.js';
 
 dotenv.config();
 
@@ -66,6 +73,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api/employees', employeeRoutes);
+app.use('/api/announcements', announcementsRouter);
+app.use('/api/reports', reportsRouter);
+app.use('/api/admins', adminsRouter);
+app.use('/api/logs', logsRouter);
+app.use('/api/requests', requestsRouter);
+app.use('/api/upload', uploadRouter);
 
 // 404 handler
 app.use((req, res) => {

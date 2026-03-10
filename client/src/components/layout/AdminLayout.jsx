@@ -13,13 +13,31 @@ export default function AdminLayout() {
     navigate('/login');
   };
 
-  const navItems = [
-    { path: '/admin/dashboard', label: 'Dashboard', icon: 'DB' },
+  const topNavItems = [{ path: '/admin/dashboard', label: 'Dashboard', icon: 'DB' }];
+
+  const recruitmentItems = [
+    { path: '/admin/jobs', label: 'Jobs', icon: 'JB' },
+    { path: '/admin/applicants', label: 'Applicants', icon: 'AP' },
     { path: '/admin/ats', label: 'ATS Pipeline', icon: 'AT' },
-    { path: '/admin/employees', label: 'Employees', icon: 'EM' },
     { path: '/admin/interviews', label: 'Interviews', icon: 'IN' },
+  ];
+
+  const workforceItems = [
+    { path: '/admin/employees', label: 'Employees', icon: 'EM' },
     { path: '/admin/training', label: 'Training', icon: 'TR' },
+  ];
+
+  const adminItems = [
+    { path: '/admin/admins', label: 'Admin List', icon: 'AL' },
+    { path: '/admin/logs', label: 'Activity Logs', icon: 'LG' },
     { path: '/admin/reports', label: 'Reports', icon: 'RP' },
+  ];
+
+  const navItems = [
+    ...topNavItems,
+    ...recruitmentItems,
+    ...workforceItems,
+    ...adminItems,
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -34,23 +52,97 @@ export default function AdminLayout() {
           <p className="text-sm text-slate-500">Admin Console</p>
         </div>
 
-        <nav className="space-y-2 px-4 py-4">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
-                isActive(item.path)
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <span className="inline-flex h-6 w-6 mr-3 items-center justify-center rounded bg-black/10 text-xs font-bold">
-                {item.icon}
-              </span>
-              {item.label}
-            </button>
-          ))}
+        <nav className="space-y-4 px-4 py-4">
+          <div className="space-y-2">
+            {topNavItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+                  isActive(item.path)
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <span className="inline-flex h-6 w-6 mr-3 items-center justify-center rounded bg-black/10 text-xs font-bold">
+                  {item.icon}
+                </span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <p className="px-2 pb-2 text-[11px] font-semibold tracking-widest text-slate-400">
+              RECRUITMENT
+            </p>
+            <div className="space-y-2">
+              {recruitmentItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="inline-flex h-6 w-6 mr-3 items-center justify-center rounded bg-black/10 text-xs font-bold">
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="px-2 pb-2 text-[11px] font-semibold tracking-widest text-slate-400">
+              WORKFORCE
+            </p>
+            <div className="space-y-2">
+              {workforceItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="inline-flex h-6 w-6 mr-3 items-center justify-center rounded bg-black/10 text-xs font-bold">
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="px-2 pb-2 text-[11px] font-semibold tracking-widest text-slate-400">
+              ADMIN
+            </p>
+            <div className="space-y-2">
+              {adminItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="inline-flex h-6 w-6 mr-3 items-center justify-center rounded bg-black/10 text-xs font-bold">
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </nav>
       </aside>
 

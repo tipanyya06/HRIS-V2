@@ -7,11 +7,13 @@ const router = express.Router();
 
 // Public routes
 router.post('/', formLimiter, applicationController.submitApplicationController);
+
+// Public GET with email query parameter for candidate validation
 router.get('/', applicationController.validateCandidateByEmailController);
 
 // Admin routes (require JWT + role)
 router.get(
-  '/',
+  '/admin/all',
   verifyToken,
   requireRole(['admin', 'super-admin', 'hr']),
   applicationController.getApplicationsController

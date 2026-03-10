@@ -1,25 +1,20 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../lib/api';
+import { LoadingSpinner } from '../../components/ui';
 
 export default function ApplyForm() {
   const { jobId } = useParams();
   const navigate = useNavigate();
 
   const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [isLoadingJob, setIsLoadingJob] = useState(true);
+  const [form, setForm] = useState({ fullName: '', email: '', phone: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-  });
-
-  // Fetch job details
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchJob = async () => {
       try {
         const response = await api.get(`/jobs/${jobId}`);
@@ -27,211 +22,264 @@ export default function ApplyForm() {
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load job details');
       } finally {
-        setLoading(false);
+        setIsLoadingJob(false);
       }
     };
+
     fetchJob();
   }, [jobId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const handleSubmit = async () => {
+    setError('');
 
-    // Validation
-    if (!formData.fullName || !formData.email || !formData.phone) {
+    if (!form.fullName || !form.email || !form.phone) {
       setError('All fields are required');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Invalid email format');
-      return;
-    }
-
     try {
-      setSubmitting(true);
+      setIsSubmitting(true);
       await api.post('/applications', {
-        jobId,
-        ...formData,
+        job_id: jobId,
+        applicant_name: form.fullName,
+        applicant_email: form.email,
+        phone: form.phone,
       });
 
       setSuccess(true);
-      setFormData({ fullName: '', email: '', phone: '' });
-
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
     } catch (err) {
-      // Handle 409 Conflict — already applied
       if (err.response?.status === 409) {
-        setError('You have already applied for this position with this email address.');
+        setError('You have already applied for this position.');
         return;
       }
-      
-      // Extract error message safely from response
-      const errorMsg = 
-        err.response?.data?.message || 
-        err.response?.data?.error || 
-        err.message || 
-        'Failed to submit application';
-      
-      setError(typeof errorMsg === 'string' ? errorMsg : 'Failed to submit application');
+      setError(err.response?.data?.message || 'Submission failed.');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (isLoadingJob) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
-        <p className="text-gray-600">Loading job details...</p>
-      </div>
-    );
-  }
-
-  if (!job) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 flex items-center justify-center">
-        <p className="text-gray-600">Job not found</p>
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center pt-32">
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Success Message */}
-        {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-green-700 font-semibold">✓ Application submitted successfully!</p>
-            <p className="text-green-600 text-sm">Redirecting back to job board...</p>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      {/* PAGE HEADER */}
+      <section style={{ backgroundColor: '#223B5B' }} className="pt-32 pb-16 px-[6%] text-center">
+        <div className="max-w-[1000px] mx-auto">
+          {/* Breadcrumb */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Link to="/careers" className="text-xs text-white/40 font-light tracking-wide hover:text-white/60 transition-colors">
+              Careers
+            </Link>
+            <span className="text-xs text-white/40">/</span>
+            <span className="text-xs text-white/40 font-light tracking-wide">
+              {job?.department || 'Position'}
+            </span>
           </div>
-        )}
 
-        {/* Job Details */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
-          <p className="text-gray-600 mb-4">{job.department}</p>
-          {job.description && (
-            <div className="bg-gray-50 p-4 rounded border border-gray-200 mb-4">
-              <h3 className="font-semibold text-gray-900 mb-2">Job Description</h3>
-              <p className="text-gray-700 text-sm">{job.description}</p>
-            </div>
-          )}
-          {job.requirements && job.requirements.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Requirements</h3>
-              <ul className="list-disc list-inside space-y-1">
-                {job.requirements.map((req, idx) => (
-                  <li key={idx} className="text-gray-700 text-sm">
-                    {req}
-                  </li>
-                ))}
-              </ul>
+          {/* Job Title */}
+          <h1 className="font-serif text-4xl md:text-5xl font-semibold text-white tracking-tight mb-3">
+            {job?.title || 'Loading...'}
+          </h1>
+
+          {/* Department Badge */}
+          {job && (
+            <div className="inline-flex items-center gap-2 mt-2">
+              <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[#2596BE] border border-[#2596BE]/40 px-3 py-1 rounded-sm bg-[#2596BE]/10">
+                {job.department || 'General'}
+              </span>
             </div>
           )}
         </div>
+      </section>
 
-        {/* Application Form */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Apply for this Position</h2>
+      {/* MAIN CONTENT */}
+      <section className="py-16 px-[6%]">
+        <div className="max-w-[1000px] mx-auto grid grid-cols-1 lg:grid-cols-5 gap-10">
+          {/* LEFT COLUMN — Job Details */}
+          <div className="lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
+            <div className="bg-white border border-gray-200 rounded-sm p-8">
+              {/* Description Section */}
+              {job?.description && (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-5 h-px bg-[#2596BE]" />
+                    <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#2596BE]">
+                      Job Description
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 font-light leading-relaxed mb-8">
+                    {job.description}
+                  </p>
+                </>
+              )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-700">{error}</p>
+              {/* Requirements Section */}
+              {job?.requirements && job.requirements.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 mb-4 pt-6 border-t border-gray-100">
+                    <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#2596BE]">
+                      Requirements
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {job.requirements.map((req, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2596BE] mt-1.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-500 font-light">{req}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Slots Info */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <p className="text-xs text-gray-400 font-light flex items-center gap-2">
+                  📋 {job?.slots} position{job?.slots !== 1 ? 's' : ''} available
+                </p>
+              </div>
             </div>
-          )}
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Full Name */}
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="John Doe"
-              />
-            </div>
+          {/* RIGHT COLUMN — Application Form */}
+          <div className="lg:col-span-3">
+            {/* SUCCESS STATE */}
+            {success ? (
+              <div className="bg-white border border-gray-200 rounded-sm p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-[#2596BE]/10 flex items-center justify-center text-[#2596BE] text-2xl mx-auto mb-6">
+                  ✓
+                </div>
+                <h2 className="font-serif text-2xl text-[#223B5B] mb-2">
+                  Application Submitted
+                </h2>
+                <p className="text-sm text-gray-500 font-light leading-relaxed mb-8">
+                  Thank you for applying for the {job?.title} position. We'll review your application and reach out soon.
+                </p>
+                <button
+                  onClick={() => navigate('/careers')}
+                  type="button"
+                  className="px-6 py-2.5 border border-[#223B5B] text-[#223B5B] text-xs font-semibold tracking-wide uppercase rounded-sm hover:bg-[#223B5B] hover:text-white transition-all"
+                >
+                  Back to Careers
+                </button>
+              </div>
+            ) : (
+              /* FORM */
+              <div className="bg-white border border-gray-200 rounded-sm p-8">
+                {/* Form Header */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-5 h-px bg-[#2596BE]" />
+                  <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#2596BE]">
+                    Apply for this Position
+                  </span>
+                </div>
+                <h2 className="font-serif text-2xl font-semibold text-[#223B5B] mb-1">
+                  Let's Get Started
+                </h2>
+                <p className="text-sm text-gray-400 font-light mb-8">
+                  Fill in your details below — we'll be in touch shortly
+                </p>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="john@example.com"
-              />
-            </div>
+                {/* Error Message */}
+                {error && (
+                  <div className="text-xs text-red-400 font-light mb-4 text-center">
+                    {error}
+                  </div>
+                )}
 
-            {/* Phone */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="+63 123 456 7890"
-              />
-            </div>
+                {/* Form Fields */}
+                <div className="flex flex-col gap-6">
+                  {/* Full Name */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold tracking-[0.08em] uppercase text-gray-600">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      placeholder="Your full name"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 text-sm font-light border border-gray-200 rounded-sm placeholder:text-gray-300 focus:outline-none focus:border-[#223B5B] transition-colors"
+                      required
+                    />
+                  </div>
 
-            {/* Note */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-700">
-                <strong>Note:</strong> Resume upload will be available in the next update. For now, please include your resume details in your application or email it separately to careers@madison88.com
-              </p>
-            </div>
+                  {/* Email */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold tracking-[0.08em] uppercase text-gray-600">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="your@email.com"
+                      value={form.email}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 text-sm font-light border border-gray-200 rounded-sm placeholder:text-gray-300 focus:outline-none focus:border-[#223B5B] transition-colors"
+                      required
+                    />
+                  </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`w-full py-2 px-4 rounded-lg font-semibold text-white transition ${
-                submitting
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {submitting ? 'Submitting...' : 'Submit Application'}
-            </button>
+                  {/* Phone */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold tracking-[0.08em] uppercase text-gray-600">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="+63 123 456 7890"
+                      value={form.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 text-sm font-light border border-gray-200 rounded-sm placeholder:text-gray-300 focus:outline-none focus:border-[#223B5B] transition-colors"
+                      required
+                    />
+                  </div>
 
-            {/* Cancel Link */}
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="w-full py-2 px-4 rounded-lg font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-          </form>
+                  {/* Resume Note */}
+                  <div className="mt-2 mb-6 px-4 py-3 bg-[#2596BE]/[0.05] border border-[#2596BE]/20 rounded-sm">
+                    <p className="text-xs text-gray-500 font-light leading-relaxed">
+                      📎 Resume upload coming soon. For now, please email your resume to careers@madison88.com with the subject line: {job?.title || 'Position'} — Application
+                    </p>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    type="button"
+                    style={{ backgroundColor: isSubmitting ? '#9CA3AF' : '#223B5B' }}
+                    className="w-full py-4 text-white text-sm font-semibold tracking-[0.06em] uppercase rounded-sm transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                  </button>
+
+                  {/* Cancel Link */}
+                  <button
+                    onClick={() => navigate('/careers')}
+                    type="button"
+                    className="w-full py-3 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors tracking-wide"
+                  >
+                    ← Back to All Positions
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

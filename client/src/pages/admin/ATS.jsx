@@ -66,7 +66,7 @@ export default function ATS() {
       setIsLoading(true);
       setErrorMessage('');
       const params = jobFilter ? `?jobId=${jobFilter}` : '';
-      const response = await api.get(`/applications${params}`);
+      const response = await api.get(`/applications/admin/all${params}`);
       const appData = response.data.data || [];
       setApplications(appData);
     } catch (err) {

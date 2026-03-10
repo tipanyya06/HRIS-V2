@@ -44,6 +44,11 @@ const sanitizeUser = (userDoc) => {
  */
 export const signup = async ({ email, password, role = 'employee', ...allFormData }) => {
   try {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw createError(400, 'Invalid email format');
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {

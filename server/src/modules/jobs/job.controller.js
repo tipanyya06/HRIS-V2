@@ -1,5 +1,33 @@
 import * as jobService from './job.service.js';
 
+// Smart GET /api/jobs — Returns all jobs if admin, active jobs if public
+export const getSmartJobsController = async (req, res, next) => {
+  try {
+    const { search, department } = req.query;
+    const isAdmin = req.user && ['admin', 'super-admin', 'hr'].includes(req.user.role);
+
+    let jobs;
+    if (isAdmin) {
+      // Admin: return all jobs
+      jobs = await jobService.getAllJobs(req.user?.id);
+    } else {
+      // Public: return active jobs only
+      const filters = {};
+      if (search) filters.search = search;
+      if (department) filters.department = department;
+      jobs = await jobService.getPublicJobs(filters);
+    }
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Create new job (admin only)
 export const createJobController = async (req, res, next) => {
   try {

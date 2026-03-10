@@ -4,7 +4,12 @@ export default {
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };

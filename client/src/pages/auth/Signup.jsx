@@ -229,6 +229,12 @@ export default function Signup() {
       setSubmitError('');
       setSubmitSuccess('');
 
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email)) {
+        setSubmitError('Please enter a valid email address.');
+        return;
+      }
+
       const payload = {
         email: data.email,
         password: data.password,

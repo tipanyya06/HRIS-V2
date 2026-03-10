@@ -1,82 +1,138 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { Button } from '../ui';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const navLinks = [
+    { label: 'Home', path: '/' },
+    { label: 'Careers', path: '/careers' },
+    { label: 'About Us', path: '/about-us' },
+    { label: 'Contact Us', path: '/contact-us' },
+  ];
+
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold text-blue-600">
-          Madison 88
-        </Link>
+    <nav className="sticky top-0 z-50 bg-white shadow-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center">
+            <img src="/darklogo.png" alt="Madison 88" style={{ height: '50px' }} />
+          </Link>
 
-        <div className="hidden md:flex gap-6">
-          <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
-          <Link to="/careers" className="text-gray-700 hover:text-blue-600">Careers</Link>
-          <Link to="/about-us" className="text-gray-700 hover:text-blue-600">About</Link>
-          <Link to="/contact-us" className="text-gray-700 hover:text-blue-600">Contact</Link>
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="text-gray-700 hover:text-blue-600 transition-colors"
+                style={{ fontSize: '15px' }}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Auth Buttons */}
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600">{user.email}</span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden text-gray-700 focus:outline-none"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {isMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
         </div>
 
-        <div className="hidden md:flex gap-2 items-center">
-          {user ? (
-            <>
-              <span className="text-sm text-gray-600 py-2">{user.email}</span>
-              <Button onClick={handleLogout} variant="secondary" size="sm">
-                Logout
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button onClick={() => navigate('/login')} variant="ghost" size="sm">
-                Login
-              </Button>
-              <Button onClick={() => navigate('/signup')} variant="primary" size="sm">
-                Sign Up
-              </Button>
-            </>
-          )}
-        </div>
-
-        <button
-          className="md:hidden text-gray-600"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-        >
-          ☰
-        </button>
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 space-y-3 border-t border-gray-200">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setIsMenuOpen(false)}
+                className="block text-gray-700 hover:text-blue-600 transition-colors py-2"
+              >
+                {link.label}
+              </Link>
+            ))}
+            
+            {user ? (
+              <>
+                <div className="text-sm text-gray-600 py-2">{user.email}</div>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  navigate('/login');
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        )}
       </div>
-
-      {isMobileOpen ? (
-        <div className="md:hidden bg-white border-t p-4 flex flex-col gap-3">
-          <Link to="/" className="text-gray-700">Home</Link>
-          <Link to="/careers" className="text-gray-700">Careers</Link>
-          <Link to="/about-us" className="text-gray-700">About</Link>
-          <Link to="/contact-us" className="text-gray-700">Contact</Link>
-          {user ? (
-            <Button onClick={handleLogout} variant="secondary" size="sm" className="w-full">
-              Logout
-            </Button>
-          ) : (
-            <>
-              <Button onClick={() => navigate('/login')} variant="ghost" size="sm" className="w-full">
-                Login
-              </Button>
-              <Button onClick={() => navigate('/signup')} variant="primary" size="sm" className="w-full">
-                Sign Up
-              </Button>
-            </>
-          )}
-        </div>
-      ) : null}
     </nav>
   );
 }

@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    terminatedAt: Date,
 
     // Basic Employment
     dateOfEmployment: Date,
@@ -135,6 +136,14 @@ const userSchema = new mongoose.Schema(
       accountNumber: String,
       accountName: String,
     },
+
+    // Licenses
+    licenses: [
+      {
+        name: String,
+        dateObtained: String,
+      },
+    ],
   },
   { timestamps: true }
 );
