@@ -17,19 +17,27 @@ import employeeRoutes from './modules/employees/employees.routes.js';
 import reportsRouter from './modules/reports/reports.routes.js';
 import adminsRouter from './modules/admins/admins.routes.js';
 import logsRouter from './modules/logs/logs.routes.js';
-import requestsRouter from './modules/requests/requests.routes.js';
+import requestRoutes from './modules/requests/requests.routes.js';
 import uploadRouter from './modules/upload/upload.routes.js';
 import announcementsRouter from './modules/announcements/announcements.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
+import trainingRoutes from './modules/training/training.routes.js';
+import { startTrainingExpiryJob } from './jobs/trainingExpiryJob.js';
 
 dotenv.config();
 
 const app = express();
 
 // Connect to MongoDB
-connectDB().catch((err) => {
-  logger.error(`Failed to connect to MongoDB: ${err.message}`);
-  process.exit(1);
-});
+connectDB()
+  .then(() => {
+    logger.info('MongoDB connected successfully');
+    startTrainingExpiryJob();
+  })
+  .catch((err) => {
+    logger.error(`Failed to connect to MongoDB: ${err.message}`);
+    process.exit(1);
+  });
 
 // Middleware
 app.use(helmet());
@@ -75,11 +83,13 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/training', trainingRoutes);
 app.use('/api/reports', reportsRouter);
 app.use('/api/admins', adminsRouter);
 app.use('/api/logs', logsRouter);
-app.use('/api/requests', requestsRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/requests', requestRoutes);
 
 // 404 handler
 app.use((req, res) => {

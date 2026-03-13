@@ -30,20 +30,23 @@ import Reports from '../pages/admin/Reports';
 import Announcements from '../pages/admin/Announcements';
 import AdminList from '../pages/admin/AdminList';
 import ActivityLogs from '../pages/admin/ActivityLogs';
+import AdminRequests from '../pages/admin/AdminRequests';
 
 // Pages - Employee
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
 import EmployeeProfile from '../pages/employee/Profile';
-import EmployeeRequests from '../pages/employee/Requests';
+import EmployeeRequests from '../pages/employee/EmployeeRequests';
 import EmployeeDocuments from '../pages/employee/Documents';
 import EmployeeAnnouncements from '../pages/employee/Announcements';
 import EmployeeContactHR from '../pages/employee/ContactHR';
+import EmployeeTraining from '../pages/employee/EmployeeTraining';
 
 // Pages - Applicant & Auth
 import ApplicantLayout from '../pages/applicant/ApplicantLayout';
 import ApplicantDashboard from '../pages/applicant/ApplicantDashboard';
 import MyApplications from '../pages/applicant/MyApplications';
 import SavedJobs from '../pages/applicant/SavedJobs';
+import ApplicantInterviews from '../pages/applicant/ApplicantInterviews';
 import PendingApproval from '../pages/auth/PendingApproval';
 
 // Protect routes by auth + role.
@@ -136,6 +139,7 @@ export default function AppRouter() {
           <Route path="dashboard" element={<ApplicantDashboard />} />
           <Route path="applications" element={<MyApplications />} />
           <Route path="saved-jobs" element={<SavedJobs />} />
+          <Route path="interview" element={<ApplicantInterviews />} />
           <Route path="browse-jobs" element={<JobBoard />} />
         </Route>
 
@@ -159,6 +163,7 @@ export default function AppRouter() {
           <Route path="reports" element={<Reports />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="admins" element={<AdminList />} />
+          <Route path="requests" element={<AdminRequests />} />
           <Route path="logs" element={<ActivityLogs />} />
         </Route>
 
@@ -178,6 +183,7 @@ export default function AppRouter() {
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="contact-hr" element={<EmployeeContactHR />} />
           <Route path="documents" element={<EmployeeDocuments />} />
+          <Route path="training" element={<EmployeeTraining />} />
         </Route>
 
         {/* Catch all - must be last */}

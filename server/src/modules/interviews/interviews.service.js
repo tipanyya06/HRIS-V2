@@ -1,4 +1,6 @@
 import InterviewSchedule from './interview.model.js';
+import Applicant from '../applications/applicant.model.js';
+import Job from '../jobs/job.model.js';
 import { logger } from '../../utils/logger.js';
 
 const createError = (status, message) => {
@@ -73,15 +75,38 @@ export const getAvailableSlots = async (adminId, month, year) => {
   }
 };
 
-export const createInterview = async ({ applicantEmail, scheduledAt, timezone, receiverName, adminId }) => {
+export const createInterview = async ({
+  applicantEmail,
+  scheduledAt,
+  timezone,
+  receiverName,
+  adminId,
+  jobId,
+}) => {
   try {
     if (!applicantEmail || !scheduledAt || !receiverName) {
-      throw createError(400, 'Missing required fields: applicantEmail, scheduledAt, receiverName');
+      throw createError(
+        400,
+        'Missing required fields: applicantEmail, scheduledAt, receiverName'
+      );
     }
 
     const parsedDate = new Date(scheduledAt);
     if (Number.isNaN(parsedDate.getTime())) {
       throw createError(400, 'Invalid scheduledAt value');
+    }
+
+    // Resolve applicantId from email — silent fail if not found
+    let applicantId = undefined;
+    try {
+      const applicant = await Applicant.findOne({
+        email: { $regex: new RegExp(`^${applicantEmail}$`, 'i') },
+      })
+        .select('_id')
+        .lean();
+      if (applicant) applicantId = applicant._id;
+    } catch (e) {
+      logger.warn(`Could not resolve applicantId for ${applicantEmail}`);
     }
 
     const interview = new InterviewSchedule({
@@ -90,6 +115,8 @@ export const createInterview = async ({ applicantEmail, scheduledAt, timezone, r
       scheduledAt: parsedDate,
       timezone: timezone || 'Asia/Manila',
       adminId: adminId || undefined,
+      jobId: jobId || undefined,
+      applicantId: applicantId || undefined,
       status: 'scheduled',
     });
 

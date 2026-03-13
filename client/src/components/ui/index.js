@@ -10,3 +10,4 @@ export { default as PageHeader } from './PageHeader';
 export { default as Toast } from './Toast';
 export { default as AuthModal } from './AuthModal';
 export { default as ApplyModal } from './ApplyModal';
+export { default as NotificationBell } from './NotificationBell';

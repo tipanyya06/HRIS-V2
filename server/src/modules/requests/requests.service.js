@@ -1,4 +1,4 @@
-import { MeetingRequest, TalentRequest } from './request.model.js';
+import Request from './request.model.js';
 import { logger } from '../../utils/logger.js';
 
 const createError = (status, message) => {
@@ -7,174 +7,70 @@ const createError = (status, message) => {
   return err;
 };
 
-export const createMeetingRequest = async (userId, data) => {
+export const createRequest = async (
+  userId,
+  { type, subject, message, date, priority }
+) => {
   try {
-    const meeting = new MeetingRequest({
+    if (!type || !subject || !message)
+      throw createError(400, 'type, subject and message are required');
+    const request = await Request.create({
       userId,
-      ...data,
+      type,
+      subject: subject.trim(),
+      message: message.trim(),
+      date: date ? new Date(date) : undefined,
+      priority: priority || 'normal',
     });
-
-    await meeting.save();
-    logger.info(`Meeting request created by user ${userId}`);
-    return meeting;
+    return request;
   } catch (error) {
-    logger.error(`Error creating meeting request: ${error.message}`);
+    logger.error(`Create request error: ${error.message}`);
     throw error;
   }
 };
 
-export const createTalentRequest = async (userId, data) => {
+export const getMyRequests = async (userId, type) => {
   try {
-    const talent = new TalentRequest({
-      userId,
-      ...data,
-    });
-
-    await talent.save();
-    logger.info(`Talent request created by user ${userId}`);
-    return talent;
+    const query = { userId };
+    if (type) query.type = type;
+    return await Request.find(query).sort({ createdAt: -1 });
   } catch (error) {
-    logger.error(`Error creating talent request: ${error.message}`);
+    logger.error(`Get my requests error: ${error.message}`);
     throw error;
   }
 };
 
-export const getAllRequests = async (filters = {}, pagination = {}) => {
+export const getAllRequests = async ({ type, status }) => {
   try {
-    const page = parseInt(pagination.page, 10) || 1;
-    const limit = parseInt(pagination.limit, 10) || 20;
-    const skip = (page - 1) * limit;
-
     const query = {};
-    if (filters.status) query.status = filters.status;
-    if (filters.requestType) query.requestType = filters.requestType;
-    if (filters.userId) query.userId = filters.userId;
-
-    // Get meetings and talents separately, then combine
-    const [meetingDocs, talentDocs] = await Promise.all([
-      MeetingRequest.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
-      TalentRequest.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
-    ]);
-
-    const [meetingCount, talentCount] = await Promise.all([
-      MeetingRequest.countDocuments(query),
-      TalentRequest.countDocuments(query),
-    ]);
-
-    // Combine and sort by createdAt
-    const allRequests = [...meetingDocs, ...talentDocs].sort(
-      (a, b) => b.createdAt - a.createdAt
-    );
-
-    const total = meetingCount + talentCount;
-
-    return {
-      data: allRequests,
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-    };
+    if (type) query.type = type;
+    if (status) query.status = status;
+    return await Request.find(query)
+      .populate('userId', 'email personalInfo.givenName personalInfo.surname')
+      .sort({ createdAt: -1 });
   } catch (error) {
-    logger.error(`Error fetching requests: ${error.message}`);
+    logger.error(`Get all requests error: ${error.message}`);
     throw error;
   }
 };
 
-export const getMyRequests = async (userId) => {
+export const updateRequestStatus = async (
+  requestId,
+  { status, adminNote }
+) => {
   try {
-    const [meetings, talents] = await Promise.all([
-      MeetingRequest.find({ userId }).sort({ createdAt: -1 }),
-      TalentRequest.find({ userId }).sort({ createdAt: -1 }),
-    ]);
-
-    const allRequests = [...meetings, ...talents].sort(
-      (a, b) => b.createdAt - a.createdAt
-    );
-
-    return allRequests;
-  } catch (error) {
-    logger.error(`Error fetching user requests: ${error.message}`);
-    throw error;
-  }
-};
-
-export const approveMeetingRequest = async (requestId) => {
-  try {
-    const request = await MeetingRequest.findByIdAndUpdate(
+    const validStatuses = ['pending', 'reviewed', 'approved', 'rejected'];
+    if (!validStatuses.includes(status))
+      throw createError(400, 'Invalid status');
+    const updated = await Request.findByIdAndUpdate(
       requestId,
-      { status: 'approved' },
-      { new: true }
+      { status, ...(adminNote ? { adminNote } : {}) },
+      { new: true, runValidators: true }
     );
-
-    if (!request) {
-      throw createError(404, 'Meeting request not found');
-    }
-
-    logger.info(`Meeting request ${requestId} approved`);
-    return request;
+    if (!updated) throw createError(404, 'Request not found');
+    return updated;
   } catch (error) {
-    logger.error(`Error approving meeting request: ${error.message}`);
-    throw error;
-  }
-};
-
-export const approveTalentRequest = async (requestId) => {
-  try {
-    const request = await TalentRequest.findByIdAndUpdate(
-      requestId,
-      { status: 'approved' },
-      { new: true }
-    );
-
-    if (!request) {
-      throw createError(404, 'Talent request not found');
-    }
-
-    logger.info(`Talent request ${requestId} approved`);
-    return request;
-  } catch (error) {
-    logger.error(`Error approving talent request: ${error.message}`);
-    throw error;
-  }
-};
-
-export const rejectMeetingRequest = async (requestId, rejectionReason) => {
-  try {
-    const request = await MeetingRequest.findByIdAndUpdate(
-      requestId,
-      { status: 'rejected', rejectionReason },
-      { new: true }
-    );
-
-    if (!request) {
-      throw createError(404, 'Meeting request not found');
-    }
-
-    logger.info(`Meeting request ${requestId} rejected`);
-    return request;
-  } catch (error) {
-    logger.error(`Error rejecting meeting request: ${error.message}`);
-    throw error;
-  }
-};
-
-export const rejectTalentRequest = async (requestId, rejectionReason) => {
-  try {
-    const request = await TalentRequest.findByIdAndUpdate(
-      requestId,
-      { status: 'rejected', rejectionReason },
-      { new: true }
-    );
-
-    if (!request) {
-      throw createError(404, 'Talent request not found');
-    }
-
-    logger.info(`Talent request ${requestId} rejected`);
-    return request;
-  } catch (error) {
-    logger.error(`Error rejecting talent request: ${error.message}`);
+    logger.error(`Update request error: ${error.message}`);
     throw error;
   }
 };

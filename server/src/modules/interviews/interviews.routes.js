@@ -4,6 +4,7 @@ import {
 	createInterviewController,
 	getInterviewsController,
 	updateInterviewStatusController,
+	getMyInterviewsController,
 } from './interviews.controller.js';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
 
@@ -17,6 +18,9 @@ router.get(
 	requireRole(['admin', 'super-admin', 'hr']),
 	getInterviewsController
 );
+
+router.get('/my', verifyToken, getMyInterviewsController);
+
 router.patch(
 	'/:id/status',
 	verifyToken,

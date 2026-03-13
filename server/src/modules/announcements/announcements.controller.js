@@ -1,4 +1,7 @@
 import * as announcementService from './announcements.service.js';
+import { createBulkNotifications } from '../notifications/notification.service.js';
+import User from '../auth/user.model.js';
+import { logger } from '../../utils/logger.js';
 
 const createError = (status, message) => {
   const err = new Error(message);
@@ -61,6 +64,29 @@ export const createAnnouncementController = async (req, res, next) => {
       priority,
       isActive,
     });
+
+    // Fan-out notification to all employees/hr users (silent fail)
+    try {
+      const employees = await User.find({
+        role: { $in: ['employee', 'hr'] },
+      })
+        .select('_id')
+        .lean();
+
+      const employeeIds = employees.map((u) => u._id);
+
+      if (employeeIds.length > 0) {
+        await createBulkNotifications(
+          employeeIds,
+          'announcement_posted',
+          'New Announcement',
+          announcement.title,
+          '/employee/announcements'
+        );
+      }
+    } catch (notifErr) {
+      logger.error('Notification error:', notifErr);
+    }
 
     res.status(201).json({
       success: true,

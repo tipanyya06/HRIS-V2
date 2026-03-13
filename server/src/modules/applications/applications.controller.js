@@ -1,6 +1,10 @@
 import * as applicationService from './applications.service.js';
 import { logger } from '../../utils/logger.js';
 import User from '../auth/user.model.js';
+import {
+  createNotification,
+  createBulkNotifications,
+} from '../notifications/notification.service.js';
 
 // POST /api/applications — Submit application (authenticated applicants only)
 export const createApplicationController = async (req, res) => {
@@ -59,6 +63,29 @@ export const createApplicationController = async (req, res) => {
     })
 
     logger.info(`Application created: ${userId} applied to ${jobId}`)
+
+    // Notify all admin/hr users of new application (silent fail)
+    try {
+      const adminUsers = await User.find({
+        role: { $in: ['admin', 'super-admin', 'hr'] },
+      })
+        .select('_id')
+        .lean();
+
+      const adminIds = adminUsers.map((u) => u._id);
+
+      if (adminIds.length > 0) {
+        await createBulkNotifications(
+          adminIds,
+          'new_application',
+          'New Application Received',
+          `${application.fullName} applied for ${application.jobId?.title || 'a position'}`,
+          '/admin/applicants'
+        );
+      }
+    } catch (notifErr) {
+      logger.error('Notification error:', notifErr);
+    }
 
     return res.status(201).json({
       success: true,
@@ -251,6 +278,21 @@ export const updateStageController = async (req, res, next) => {
       `${req.user.email}`,
       notes || ''
     );
+
+    // Notify applicant of stage change (silent fail)
+    try {
+      if (applicant.userId) {
+        await createNotification(
+          applicant.userId,
+          'stage_changed',
+          'Application Update',
+          `Your application for ${applicant.jobId?.title || 'a position'} has moved to ${newStage}`,
+          '/applicant/applications'
+        );
+      }
+    } catch (notifErr) {
+      logger.error('Notification error:', notifErr);
+    }
 
     res.status(200).json({
       success: true,

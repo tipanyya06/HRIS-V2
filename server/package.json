@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon --watch src --ext js,json --ignore logs/** --delay 300ms src/server.js",
     "start": "node src/server.js",
+    "migrate:interviews": "node --experimental-vm-modules src/scripts/migrateInterviews.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src --ext .js"
@@ -20,6 +21,7 @@
   "author": "Madison 88",
   "license": "ISC",
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.1",
     "@supabase/supabase-js": "^2.31.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
@@ -32,6 +34,7 @@
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "pdfkit": "^0.17.2",
     "winston": "^3.8.0"
   },

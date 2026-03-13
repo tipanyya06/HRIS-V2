@@ -1,131 +1,46 @@
 import mongoose from 'mongoose';
 
-const meetingRequestSchema = new mongoose.Schema(
+const requestSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
-    requestType: {
+    type: {
       type: String,
-      enum: ['meeting'],
-      default: 'meeting',
+      enum: ['meeting', 'talent', 'incident'],
+      required: true,
     },
     subject: {
       type: String,
       required: true,
       trim: true,
     },
-    type: {
+    message: {
       type: String,
-      enum: ['performance', 'grievance', 'general', 'onboarding', 'other'],
       required: true,
+      trim: true,
     },
-    preferredDate: {
+    date: {
       type: Date,
-      required: true,
     },
-    preferredTime: {
+    priority: {
       type: String,
-      required: true,
-    },
-    timezone: {
-      type: String,
-      default: 'UTC',
-    },
-    duration: {
-      type: Number,
-      default: 60,
-      min: 15,
-    },
-    location: {
-      type: String,
-      enum: ['MS Teams', 'In-person', 'Phone Call'],
-      required: true,
-    },
-    agenda: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    preparation: {
-      type: String,
-      trim: true,
+      enum: ['low', 'normal', 'urgent'],
+      default: 'normal',
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'reviewed', 'approved', 'rejected'],
       default: 'pending',
     },
-    rejectionReason: String,
+    adminNote: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
-const talentRequestSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
-    },
-    requestType: {
-      type: String,
-      enum: ['talent'],
-      default: 'talent',
-    },
-    reportingTo: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    department: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    positionTitle: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    headcountNeeded: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    employmentType: {
-      type: String,
-      enum: ['full-time', 'part-time', 'contract', 'remote', 'hybrid'],
-      required: true,
-    },
-    roleDescription: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    targetStartDate: Date,
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
-    },
-    rejectionReason: String,
-  },
-  { timestamps: true }
-);
-
-// Create indexes
-meetingRequestSchema.index({ userId: 1, status: 1 });
-meetingRequestSchema.index({ createdAt: -1 });
-talentRequestSchema.index({ userId: 1, status: 1 });
-talentRequestSchema.index({ createdAt: -1 });
-
-// Create separate models for each request type
-const MeetingRequest = mongoose.model('MeetingRequest', meetingRequestSchema);
-const TalentRequest = mongoose.model('TalentRequest', talentRequestSchema);
-
-export { MeetingRequest, TalentRequest };
+export default mongoose.model('Request', requestSchema);

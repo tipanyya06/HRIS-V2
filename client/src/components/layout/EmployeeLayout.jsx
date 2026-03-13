@@ -1,13 +1,14 @@
 import React from 'react';
 import { Navigate, useLocation, Link, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../ui/NotificationBell';
 import {
   LayoutDashboard,
   User,
   FileText,
   Bell,
   MessageSquare,
-  Briefcase,
+  GraduationCap,
   LogOut,
   Menu,
   X,
@@ -17,10 +18,10 @@ import { useState } from 'react';
 const navigationItems = [
   { label: 'Dashboard', path: '/employee/dashboard', icon: LayoutDashboard },
   { label: 'My Profile', path: '/employee/profile', icon: User },
-  { label: 'Requests', path: '/employee/requests', icon: FileText },
+  { label: 'Requests', path: '/employee/requests', icon: MessageSquare },
   { label: 'Announcements', path: '/employee/announcements', icon: Bell },
   { label: 'Contact HR', path: '/employee/contact-hr', icon: MessageSquare },
-  { label: 'Browse Jobs', path: '/', icon: Briefcase },
+  { label: 'Training', path: '/employee/training', icon: GraduationCap },
 ];
 
 export default function EmployeeLayout() {
@@ -119,22 +120,12 @@ export default function EmployeeLayout() {
             </p>
           </div>
 
-          {/* Right: Icons & Logout */}
-          <div className="flex items-center gap-4">
-            {/* Notifications Bell */}
-            <button className="relative text-gray-600 hover:text-gray-900 transition-colors">
-              <Bell size={24} />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors text-sm lg:text-base"
-            >
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+          {/* Right: NotificationBell & Email */}
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <p className="text-sm font-medium text-gray-700">
+              {user?.email}
+            </p>
           </div>
         </header>
 

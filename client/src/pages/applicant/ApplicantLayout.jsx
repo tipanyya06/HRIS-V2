@@ -1,11 +1,13 @@
 import React from 'react';
 import { Navigate, useLocation, useNavigate, Link, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../../components/ui/NotificationBell';
 import {
   LayoutDashboard,
   FileText,
   Bookmark,
   Briefcase,
+  Calendar,
   LogOut,
   Menu,
   X,
@@ -16,6 +18,7 @@ import { useState } from 'react';
 const navigationItems = [
   { label: 'Dashboard', path: '/applicant/dashboard', icon: LayoutDashboard },
   { label: 'My Applications', path: '/applicant/applications', icon: FileText },
+  { label: 'Interviews', path: '/applicant/interview', icon: Calendar },
   { label: 'Saved Jobs', path: '/applicant/saved-jobs', icon: Bookmark },
   { label: 'Browse Jobs', path: '/applicant/browse-jobs', icon: Briefcase },
 ];
@@ -118,22 +121,12 @@ export default function ApplicantLayout() {
             </p>
           </div>
 
-          {/* Right: Icons & Logout */}
-          <div className="flex items-center gap-4">
-            {/* Notifications Bell */}
-            <button className="relative text-gray-600 hover:text-gray-900 transition-colors">
-              <Bell size={24} />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors text-sm lg:text-base"
-            >
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+          {/* Right: NotificationBell & Email */}
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <p className="text-sm font-medium text-gray-700">
+              {user?.email}
+            </p>
           </div>
         </header>
 
