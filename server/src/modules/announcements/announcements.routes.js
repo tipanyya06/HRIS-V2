@@ -4,15 +4,13 @@ import { verifyToken, requireRole } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// Public endpoints - all authenticated users can view
-router.get('/', verifyToken, announcementController.getAnnouncementsController);
-router.get('/:id', verifyToken, announcementController.getAnnouncementByIdController);
+// Public endpoints - no auth required
+router.get('/', announcementController.getAnnouncementsController);
+router.get('/:id', announcementController.getAnnouncementByIdController);
 
 // Admin-only endpoints
-router.use(verifyToken, requireRole(['admin', 'super-admin', 'hr']));
-
-router.post('/', announcementController.createAnnouncementController);
-router.patch('/:id', announcementController.updateAnnouncementController);
-router.delete('/:id', announcementController.deleteAnnouncementController);
+router.post('/', verifyToken, requireRole(['admin', 'super-admin', 'hr']), announcementController.createAnnouncementController);
+router.patch('/:id', verifyToken, requireRole(['admin', 'super-admin', 'hr']), announcementController.updateAnnouncementController);
+router.delete('/:id', verifyToken, requireRole(['admin', 'super-admin']), announcementController.deleteAnnouncementController);
 
 export default router;

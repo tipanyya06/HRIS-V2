@@ -9,15 +9,15 @@ const createError = (status, message) => {
 
 export const getAnnouncements = async (filters = {}, pagination = {}) => {
   try {
-    const { limit = 10, page = 1 } = pagination;
+    const { limit = 50, page = 1 } = pagination;
     const skip = (page - 1) * limit;
 
     const query = { isActive: true };
-    if (filters.department) query.department = filters.department;
+    if (filters.targetAudience) query.targetAudience = filters.targetAudience;
     if (filters.priority) query.priority = filters.priority;
 
     const announcements = await Announcement.find(query)
-      .populate('author', 'email firstName lastName')
+      .populate('createdBy', 'personalInfo email')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip(skip);
@@ -42,8 +42,8 @@ export const getAnnouncements = async (filters = {}, pagination = {}) => {
 export const getAnnouncementById = async (id) => {
   try {
     const announcement = await Announcement.findById(id).populate(
-      'author',
-      'email firstName lastName'
+      'createdBy',
+      'personalInfo email'
     );
 
     if (!announcement) {
@@ -58,11 +58,14 @@ export const getAnnouncementById = async (id) => {
   }
 };
 
-export const createAnnouncement = async (data) => {
+export const createAnnouncement = async (userId, data) => {
   try {
-    const announcement = new Announcement(data);
+    const announcement = new Announcement({
+      ...data,
+      createdBy: userId,
+    });
     await announcement.save();
-    return await announcement.populate('author', 'email firstName lastName');
+    return await announcement.populate('createdBy', 'personalInfo email');
   } catch (error) {
     if (error.name === 'ValidationError') {
       throw createError(400, 'Invalid announcement data');
@@ -75,7 +78,7 @@ export const createAnnouncement = async (data) => {
 export const updateAnnouncement = async (id, data) => {
   try {
     const allowed = {};
-    const allowedFields = ['title', 'content', 'department', 'priority', 'isActive'];
+    const allowedFields = ['title', 'body', 'targetAudience', 'priority', 'isActive'];
     allowedFields.forEach((field) => {
       if (field in data) allowed[field] = data[field];
     });
@@ -83,7 +86,7 @@ export const updateAnnouncement = async (id, data) => {
     const announcement = await Announcement.findByIdAndUpdate(id, allowed, {
       new: true,
       runValidators: true,
-    }).populate('author', 'email firstName lastName');
+    }).populate('createdBy', 'personalInfo email');
 
     if (!announcement) {
       throw createError(404, 'Announcement not found');

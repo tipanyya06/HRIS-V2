@@ -126,18 +126,18 @@ export default function Profile() {
         break;
       case 'emergency':
         setEmergencyForm({
-          name: employee.emergencyContact?.name || '',
-          relationship: employee.emergencyContact?.relationship || '',
-          phone: employee.emergencyContact?.contact || '',
-          address: employee.emergencyContact?.address?.addressLine || '',
+          emergencyContactName: employee.emergencyContact?.name || '',
+          emergencyContactRelationship: employee.emergencyContact?.relationship || '',
+          emergencyContactPhone: employee.emergencyContact?.contact || '',
+          emergencyContactAddress: employee.emergencyContact?.address?.addressLine || '',
         });
         setIsEditingEmergency(true);
         break;
       case 'hmo':
         setHmoForm({
-          provider: employee.hmoInfo?.provider || '',
-          cardNumber: employee.hmoInfo?.cardNumber || '',
-          dependents: employee.hmoInfo?.dependents || [],
+          hmoProvider: employee.hmoInfo?.provider || '',
+          hmoCardNumber: employee.hmoInfo?.cardNumber || '',
+          hmoDependents: employee.hmoInfo?.dependents || [],
         });
         setIsEditingHMO(true);
         break;
@@ -240,13 +240,13 @@ export default function Profile() {
       const formData = new FormData();
       formData.append('photo', file);
 
-      const response = await api.post('/employees/upload/profile-pic', formData, {
+      const response = await api.post('/upload/profile-pic', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setEmployee((prev) => ({
         ...prev,
-        profilePicUrl: response.data.profilePicUrl,
+        profilePicUrl: response.data.data.profilePicUrl,
       }));
       setToastType('success');
       setToastMessage('Profile picture updated successfully');
@@ -273,13 +273,13 @@ export default function Profile() {
       const formData = new FormData();
       formData.append('document', file);
 
-      const response = await api.post('/employees/upload/documents', formData, {
+      const response = await api.post('/upload/documents', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setEmployee((prev) => ({
         ...prev,
-        documents: [...(prev.documents || []), response.data.documentUrl],
+        documents: [...(prev.documents || []), response.data.data.documentUrl],
       }));
       setToastType('success');
       setToastMessage('Document uploaded successfully');

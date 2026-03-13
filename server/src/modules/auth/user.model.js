@@ -27,8 +27,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['employee', 'admin', 'super-admin', 'hr'],
-      default: 'employee',
+      enum: ['super-admin', 'admin', 'hr', 'employee', 'applicant'],
+      default: 'applicant',
     },
     isVerified: {
       type: Boolean,
@@ -144,6 +144,25 @@ const userSchema = new mongoose.Schema(
         dateObtained: String,
       },
     ],
+
+    // Profile Picture
+    profilePicUrl: {
+      type: String,
+      default: '',
+    },
+
+    // Documents
+    documents: [
+      {
+        url: String,
+        originalName: String,
+        type: String,
+        uploadedAt: Date,
+      },
+    ],
+
+    // Saved Jobs
+    savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
   },
   { timestamps: true }
 );

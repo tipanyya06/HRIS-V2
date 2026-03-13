@@ -30,6 +30,7 @@ export default function AdminLayout() {
   const adminItems = [
     { path: '/admin/admins', label: 'Admin List', icon: 'AL' },
     { path: '/admin/logs', label: 'Activity Logs', icon: 'LG' },
+    { path: '/admin/announcements', label: 'Announcements', icon: 'AN' },
     { path: '/admin/reports', label: 'Reports', icon: 'RP' },
   ];
 

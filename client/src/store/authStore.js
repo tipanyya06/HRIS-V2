@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import api from '../lib/api';
 
+// Module-level guard that persists across StrictMode renders
+let authInitialized = false;
+
 export const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   isLoading: false,
   error: null,
-  isInitialized: false,
 
   setUser: (user, token) => {
     set({ user, token, error: null });
@@ -50,8 +52,9 @@ export const useAuthStore = create((set, get) => ({
     // Clear any old zustand persist key
     localStorage.removeItem('hris_auth');
 
-    // Guard: only run once
-    if (get().isInitialized) return;
+    // Module-level guard persists across StrictMode double renders
+    if (authInitialized) return;
+    authInitialized = true;
 
     const token = localStorage.getItem('hris_token');
     const userJson = localStorage.getItem('hris_user');
@@ -59,14 +62,28 @@ export const useAuthStore = create((set, get) => ({
     if (token && userJson) {
       try {
         const user = JSON.parse(userJson);
-        set({ user, token, isInitialized: true });
+        set({ user, token });
       } catch (error) {
         localStorage.removeItem('hris_token');
         localStorage.removeItem('hris_user');
-        set({ isInitialized: true });
       }
-    } else {
-      set({ isInitialized: true });
+    }
+  },
+
+  // Sync token from localStorage if missing in store
+  syncTokenFromStorage: () => {
+    const storeToken = get().token;
+    const localToken = localStorage.getItem('hris_token');
+    
+    if (localToken && !storeToken) {
+      const userJson = localStorage.getItem('hris_user');
+      try {
+        const user = userJson ? JSON.parse(userJson) : null;
+        set({ user, token: localToken });
+      } catch (error) {
+        localStorage.removeItem('hris_token');
+        localStorage.removeItem('hris_user');
+      }
     }
   },
 }));

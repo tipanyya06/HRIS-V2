@@ -1,20 +1,58 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
+import { ApplyModal, AuthModal } from '../../components/ui';
 
 export default function JobBoard() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [filters, setFilters] = useState({ search: '', department: '' });
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pendingApplyJob, setPendingApplyJob] = useState(null);
+  const [employeeBlockMessage, setEmployeeBlockMessage] = useState('');
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
+
+  // Fetch user's applied jobs on mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserJobData();
+    }
+  }, [user?.id]);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
     fetchJobs();
   }, [filters]);
+
+  const fetchUserJobData = async () => {
+    try {
+      const appliedRes = await api.get('/applications/my');
+      if (appliedRes.status === 200) {
+        const applied = appliedRes.data.data || [];
+        console.log('RAW APPLIED DATA:', applied);
+        const ids = applied
+          .map(a => {
+            if (typeof a.jobId === 'object' && a.jobId?._id)
+              return String(a.jobId._id);
+            if (typeof a.jobId === 'string')
+              return String(a.jobId);
+            return null;
+          })
+          .filter(Boolean);
+        console.log('APPLIED JOB IDS:', ids);
+        setAppliedJobIds(ids);
+      }
+    } catch (err) {
+      console.error('Error fetching user applications:', err);
+    }
+  };
 
   const fetchJobs = async () => {
     try {
@@ -54,47 +92,35 @@ export default function JobBoard() {
     setFilters({ ...filters, department: e.target.value });
   };
 
+  const handleApply = (job) => {
+    if (!job) return;
+    const blockedAdminRoles = ['admin', 'super-admin', 'hr'];
+    
+    if (user && blockedAdminRoles.includes(user.role)) {
+      return;
+    }
+
+    if (user?.role === 'employee') {
+      setEmployeeBlockMessage('You are already an employee. Contact HR for internal transfers.');
+      return;
+    }
+
+    if (!user) {
+      setPendingApplyJob(job);
+      setAuthModalOpen(true);
+    } else {
+      setSelectedJob(job);
+      setApplyModalOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <nav className="bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-3 mb-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="text-lg font-bold text-gray-900">Madison 88</span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/meeting-calendar')}
-              className="text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-2"
-            >
-              Schedule Interview
-            </button>
-            <button
-              onClick={() => navigate('/signup')}
-              className="bg-gray-900 hover:bg-black text-white font-semibold px-4 py-2 rounded-lg transition"
-            >
-              Sign Up
-            </button>
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-            >
-              Login
-            </button>
-          </div>
-        </div>
-      </nav>
-
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Board</h1>
-            <p className="text-gray-600">Find your next opportunity at Madison 88</p>
-          </div>
-          <button
-            onClick={() => navigate('/login')}
-            className="text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-2"
-          >
-            Login
-          </button>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Board</h1>
+          <p className="text-gray-600">Find your next opportunity at Madison 88</p>
         </div>
 
         {/* Filters */}
@@ -240,11 +266,22 @@ export default function JobBoard() {
                   </div>
                 )}
 
-                <button 
-                  onClick={() => navigate(`/apply/${selectedJob._id}`)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                  Apply Now
-                </button>
+                {user?.role === 'employee'
+                  ? null
+                  : user && ['admin', 'super-admin', 'hr'].includes(user.role)
+                    ? null
+                    : appliedJobIds.includes(String(selectedJob?._id))
+                      ? <button
+                          onClick={() => handleApply(selectedJob)}
+                          className="w-full py-3 text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
+                          Already Applied — View Status
+                        </button>
+                      : <button
+                          onClick={() => handleApply(selectedJob)}
+                          className="w-full py-3 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                          Apply Now
+                        </button>
+                }
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-6 text-center">
@@ -254,6 +291,53 @@ export default function JobBoard() {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setPendingApplyJob(null);
+        }}
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          if (pendingApplyJob) {
+            setSelectedJob(pendingApplyJob);
+            setPendingApplyJob(null);
+            setApplyModalOpen(true);
+          }
+        }}
+      />
+
+      <ApplyModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        job={selectedJob}
+        alreadyApplied={
+          selectedJob 
+            ? appliedJobIds.includes(String(selectedJob._id)) 
+            : false
+        }
+        onSuccess={() => {
+          setApplyModalOpen(false);
+          if (selectedJob) {
+            setAppliedJobIds(prev => [...prev, String(selectedJob._id)]);
+          }
+          setSelectedJob(null);
+          fetchUserJobData();
+        }}
+      />
+
+      {employeeBlockMessage !== '' ? (
+        <div className="fixed bottom-4 right-4 bg-yellow-600 text-white px-4 py-3 rounded-lg shadow-lg z-40 text-sm max-w-sm">
+          {employeeBlockMessage}
+          <button
+            onClick={() => setEmployeeBlockMessage('')}
+            className="ml-3 font-bold hover:opacity-70"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

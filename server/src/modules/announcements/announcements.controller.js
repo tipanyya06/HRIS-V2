@@ -8,10 +8,10 @@ const createError = (status, message) => {
 
 export const getAnnouncementsController = async (req, res, next) => {
   try {
-    const { limit = 10, page = 1, department, priority } = req.query;
+    const { limit = 50, page = 1, targetAudience, priority } = req.query;
 
     const filters = {};
-    if (department) filters.department = department;
+    if (targetAudience) filters.targetAudience = targetAudience;
     if (priority) filters.priority = priority;
 
     const result = await announcementService.getAnnouncements(filters, {
@@ -46,20 +46,20 @@ export const getAnnouncementByIdController = async (req, res, next) => {
 
 export const createAnnouncementController = async (req, res, next) => {
   try {
-    const { title, content, department, priority } = req.body;
+    const { title, body, targetAudience, priority, isActive } = req.body;
 
-    if (!title || !content) {
+    if (!title || !body) {
       return res.status(400).json({
-        error: 'Missing required fields: title, content',
+        error: 'Missing required fields: title, body',
       });
     }
 
-    const announcement = await announcementService.createAnnouncement({
+    const announcement = await announcementService.createAnnouncement(req.user.id, {
       title,
-      content,
-      department,
+      body,
+      targetAudience,
       priority,
-      author: req.user.id,
+      isActive,
     });
 
     res.status(201).json({

@@ -5,11 +5,19 @@ import { formLimiter } from '../../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Public routes
-router.post('/', formLimiter, applicationController.submitApplicationController);
+// Authenticated applicant routes
+router.post(
+  '/',
+  verifyToken,
+  formLimiter,
+  applicationController.createApplicationController
+);
 
 // Public GET with email query parameter for candidate validation
 router.get('/', applicationController.validateCandidateByEmailController);
+
+// Applicant routes (require JWT, no role restriction)
+router.get('/my', verifyToken, applicationController.getMyApplicationsController);
 
 // Admin routes (require JWT + role)
 router.get(

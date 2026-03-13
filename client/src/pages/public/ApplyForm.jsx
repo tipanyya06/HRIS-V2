@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
 import { LoadingSpinner } from '../../components/ui';
 
 export default function ApplyForm() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (!user) {
+      navigate(`/jobs?apply=${jobId}`);
+    }
+  }, [user, jobId, navigate]);
+
+  if (!user) return null;
 
   const [job, setJob] = useState(null);
   const [isLoadingJob, setIsLoadingJob] = useState(true);
@@ -45,10 +55,10 @@ export default function ApplyForm() {
     try {
       setIsSubmitting(true);
       await api.post('/applications', {
-        job_id: jobId,
-        applicant_name: form.fullName,
-        applicant_email: form.email,
-        phone: form.phone,
+        jobId:    jobId,
+        fullName: form.fullName,
+        email:    form.email,
+        phone:    form.phone,
       });
 
       setSuccess(true);

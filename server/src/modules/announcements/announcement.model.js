@@ -5,29 +5,29 @@ const announcementSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
-      trim: true,
     },
-    content: {
+    body: {
       type: String,
       required: true,
-    },
-    department: {
-      type: String,
-      default: null, // null = company-wide
     },
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high'],
-      default: 'medium',
+      enum: ['low', 'normal', 'high', 'urgent'],
+      default: 'normal',
     },
-    author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+    targetAudience: {
+      type: String,
+      enum: ['all', 'employees', 'admins'],
+      default: 'all',
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
   },
   { timestamps: true }
@@ -35,6 +35,6 @@ const announcementSchema = new mongoose.Schema(
 
 // Index for efficient queries
 announcementSchema.index({ isActive: 1, createdAt: -1 });
-announcementSchema.index({ department: 1, createdAt: -1 });
+announcementSchema.index({ targetAudience: 1, createdAt: -1 });
 
 export default mongoose.model('Announcement', announcementSchema);

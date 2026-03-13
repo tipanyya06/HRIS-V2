@@ -203,3 +203,80 @@ export const logout = async (userId) => {
   logger.info(`User logged out: ${userId}`);
   return { message: 'Logged out successfully' };
 };
+
+/**
+ * Register a new applicant (public-facing)
+ */
+export const registerApplicant = async ({ firstName, lastName, email, password }) => {
+  try {
+    const existing = await User.findOne({ email });
+    if (existing) throw createError(409, 'EMAIL_EXISTS');
+
+    // Do NOT call bcrypt.hash here — password is hashed in the User pre-save hook
+    const user = await User.create({
+      personalInfo: { givenName: firstName, surname: lastName },
+      email,
+      password,
+      role: 'applicant',
+      isVerified: true,
+      isActive: true,
+    });
+
+    const token = signToken({
+      id: user._id,
+      role: user.role,
+      email: user.email,
+    });
+
+    return { user: sanitizeUser(user), token };
+  } catch (error) {
+    logger.error(`Register applicant error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const saveJob = async (userId, jobId) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedJobs: jobId } },
+      { new: true }
+    ).select('savedJobs');
+    if (!user) throw createError(404, 'USER_NOT_FOUND');
+    return user.savedJobs;
+  } catch (error) {
+    logger.error(`Save job error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const unsaveJob = async (userId, jobId) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedJobs: jobId } },
+      { new: true }
+    ).select('savedJobs');
+    if (!user) throw createError(404, 'USER_NOT_FOUND');
+    return user.savedJobs;
+  } catch (error) {
+    logger.error(`Unsave job error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getSavedJobs = async (userId) => {
+  try {
+    const user = await User.findById(userId)
+      .populate({
+        path: 'savedJobs',
+        match: { isActive: true },
+      })
+      .select('savedJobs');
+    if (!user) throw createError(404, 'USER_NOT_FOUND');
+    return user.savedJobs.filter((job) => job !== null);
+  } catch (error) {
+    logger.error(`Get saved jobs error: ${error.message}`);
+    throw error;
+  }
+};

@@ -33,13 +33,10 @@ export default function Login() {
       const role = result?.user?.role;
 
       // Redirect based on role
-      if (role === 'admin' || role === 'super-admin' || role === 'hr') {
-        navigate('/admin/dashboard');
-      } else if (role === 'employee') {
-        navigate('/employee/profile');
-      } else {
-        navigate('/');
-      }
+      if (['admin', 'super-admin', 'hr'].includes(role)) navigate('/admin/dashboard');
+      else if (role === 'employee')                       navigate('/employee/profile');
+      else if (role === 'applicant')                      navigate('/applicant/dashboard');
+      else                                                navigate('/pending');
     } catch (err) {
       // Extract error message
       let errorMessage = 'Login failed. Please try again.';

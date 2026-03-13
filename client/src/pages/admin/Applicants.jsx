@@ -63,7 +63,7 @@ export default function Applicants() {
       setIsLoading(true);
       setError('');
 
-      let url = `/applications?page=${page}&limit=20`;
+      let url = `/applications/admin/all?page=${page}&limit=20`;
       if (filterStage !== 'all') url += `&stage=${filterStage}`;
       if (filterJobId !== 'all') url += `&jobId=${filterJobId}`;
       if (search.trim()) url += `&search=${search.trim()}`;

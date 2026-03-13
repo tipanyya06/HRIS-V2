@@ -9,7 +9,21 @@ const createError = (status, message) => {
   return err;
 };
 
-// Submit application for a job (public)
+// Check for duplicate application by jobId and userId
+export const getApplicationDuplicate = async ({ jobId, userId }) => {
+  try {
+    const existing = await Applicant.findOne({
+      jobId,
+      userId,
+    });
+    return existing;
+  } catch (error) {
+    logger.error(`Check duplicate application error: ${error.message}`);
+    throw error;
+  }
+};
+
+// Submit application for a job (public or authenticated)
 export const submitApplication = async (jobId, applicantData, resumeUrl = null) => {
   try {
     // Validate job exists and is active
@@ -30,13 +44,15 @@ export const submitApplication = async (jobId, applicantData, resumeUrl = null) 
       throw createError(409, 'You have already applied for this job');
     }
 
-    // Create applicant
+    // Create applicant with all fields
     const applicant = new Applicant({
       jobId,
       fullName: applicantData.fullName,
       email: applicantData.email,
-      phone: applicantData.phone,
-      resumeUrl: resumeUrl || null,
+      phone: applicantData.phone || '',
+      coverLetter: applicantData.coverLetter || '',
+      resumeUrl: resumeUrl || applicantData.resumeUrl || '',
+      userId: applicantData.userId,   // required for authenticated submissions
       stage: 'applied',
     });
 
@@ -182,6 +198,98 @@ export const updateStage = async (
         });
         logger.info(`User account activated for applicant ${applicant.email}`);
       }
+
+      // ════════════════════════════════════════
+      // STEP 1 — Copy application data to User profile
+      // ════════════════════════════════════════
+      try {
+        const hiredUser = await User.findById(applicant.userId);
+        if (hiredUser) {
+          const updates = {};
+
+          // Copy phone if exists on application
+          if (applicant.phone) {
+            updates['contactInfo.mainContactNo'] = applicant.phone;
+          }
+
+          // Copy resume to documents array
+          if (applicant.resumeUrl) {
+            if (!updates.$push) updates.$push = {};
+            updates.$push.documents = {
+              url: applicant.resumeUrl,
+              originalName: 'Application Resume',
+              type: 'resume',
+              uploadedAt: new Date(),
+            };
+          }
+
+          // Set employment info from job
+          const job = await Job.findById(applicant.jobId).select('title department');
+          if (job) {
+            updates['employmentInfo.position'] = job.title;
+            updates['employmentInfo.department'] = job.department;
+          }
+
+          // Apply all updates
+          if (Object.keys(updates).length > 0) {
+            await User.findByIdAndUpdate(applicant.userId, updates, { new: true });
+            logger.info(`Hire data copied to user profile: ${applicant.userId}`);
+          }
+        }
+      } catch (profileErr) {
+        logger.error(`Failed to copy hire data to user profile: ${profileErr.message}`);
+        // Don't throw — hire continues even if profile update fails
+      }
+
+      // ════════════════════════════════════════
+      // STEP 2 — Send Brevo welcome email
+      // ════════════════════════════════════════
+      try {
+        // Try to import sendEmail utility (may not exist)
+        let sendEmail;
+        try {
+          const emailModule = await import('../../utils/email.js');
+          sendEmail = emailModule.default || emailModule.sendEmail;
+        } catch (importErr) {
+          logger.warn(`Email utility not available: ${importErr.message}`);
+        }
+
+        if (sendEmail && typeof sendEmail === 'function') {
+          const job = await Job.findById(applicant.jobId).select('title');
+          const jobTitle = job?.title || 'a team member';
+
+          await sendEmail({
+            to: applicant.email,
+            subject: 'Welcome to Madison 88 — Your Employee Account is Ready',
+            html: `
+              <h2>Congratulations!</h2>
+              <p>You have been hired as <strong>${jobTitle}</strong> at Madison 88.</p>
+              <p>Your employee portal is now active.</p>
+              <p>Login at: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login</p>
+              <p>Use your registered email and password to access your employee dashboard.</p>
+              <p>Welcome to the team!</p>
+            `,
+          });
+          logger.info(`Welcome email sent to: ${applicant.email}`);
+        }
+      } catch (emailErr) {
+        // Don't fail the hire if email fails — just log it
+        logger.error(`Welcome email failed: ${emailErr.message}`);
+      }
+
+      // ════════════════════════════════════════
+      // STEP 3 — Verify applicant TTL is removed
+      // ════════════════════════════════════════
+      try {
+        await Applicant.findByIdAndUpdate(applicant._id, {
+          isEmployee: true,
+          $unset: { deletedAt: '' },
+        });
+        logger.info(`Applicant TTL removed: ${applicant._id}`);
+      } catch (ttlErr) {
+        logger.error(`Failed to remove applicant TTL: ${ttlErr.message}`);
+        // Don't throw — hire continues even if TTL update fails
+      }
     }
 
     await applicant.save();
@@ -256,5 +364,29 @@ export const getApplicationsByStage = async (jobId = null) => {
   } catch (error) {
     logger.error(`Get applications by stage error: ${error.message}`);
     throw error;
+  }
+};
+
+/**
+ * Get applicant's own applications (applicant-facing)
+ */
+export const getMyApplications = async (userId) => {
+  try {
+    // Filter applications by userId directly
+    if (!userId) throw createError(400, 'User ID is required');
+
+    const applications = await Applicant.find({ userId })
+      .populate({
+        path: 'jobId',
+        select: 'title department location employmentType description status',
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Filter out applications where the job was deleted (populate sets it to null)
+    return applications.filter(a => a.jobId !== null);
+  } catch (err) {
+    logger.error(`Get my applications error: ${err.message}`);
+    throw err;
   }
 };

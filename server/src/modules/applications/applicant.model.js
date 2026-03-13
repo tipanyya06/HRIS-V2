@@ -19,11 +19,24 @@ const applicantSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
+      default: '',
       set: (val) => val ? encrypt(val) : val,
       get: (val) => val ? decrypt(val) : val,
     },
-    resumeUrl: String,
-    coverLetter: String,
+    resumeUrl: {
+      type: String,
+      default: '',
+    },
+    coverLetter: {
+      type: String,
+      default: '',
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+      default: null,
+    },
     stage: {
       type: String,
       enum: ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'],

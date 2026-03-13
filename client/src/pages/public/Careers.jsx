@@ -1,20 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
-import { LoadingSpinner } from '../../components/ui';
+import { LoadingSpinner, AuthModal, ApplyModal } from '../../components/ui';
 
 export default function Careers() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('All');
   const [departments, setDepartments] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [pendingJob, setPendingJob] = useState(null);
+  const [employeeBlockMessage, setEmployeeBlockMessage] = useState('');
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
 
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  // Fetch applied jobs for applicants and employees
+  useEffect(() => {
+    if (user?.role === 'applicant' || user?.role === 'employee') {
+      fetchUserJobData();
+    }
+  }, [user]);
+
+  const fetchUserJobData = async () => {
+    try {
+      const appliedRes = await api.get('/applications/my');
+      if (appliedRes.status === 200) {
+        const applied = appliedRes.data.data || [];
+        const ids = applied
+          .map(a => {
+            if (typeof a.jobId === 'object' && a.jobId?._id)
+              return String(a.jobId._id);
+            if (typeof a.jobId === 'string')
+              return String(a.jobId);
+            return null;
+          })
+          .filter(Boolean);
+        setAppliedJobIds(ids);
+      }
+    } catch (err) {
+      // Silent fail
+    }
+  };
 
   const fetchJobs = async () => {
     try {
@@ -40,6 +76,24 @@ export default function Careers() {
     const matchDept = filterDept === 'All' || job.department === filterDept;
     return matchSearch && matchDept;
   });
+
+  const handleAuthSuccess = () => {
+    setAuthModalOpen(false);
+    if (pendingJob) {
+      setSelectedJob(pendingJob);
+      setApplyModalOpen(true);
+      setPendingJob(null);
+    }
+  };
+
+  const handleApplySuccess = () => {
+    setApplyModalOpen(false);
+    if (selectedJob) {
+      setAppliedJobIds(prev => [...prev, String(selectedJob._id)]);
+    }
+    setSelectedJob(null);
+    fetchUserJobData();
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -139,8 +193,7 @@ export default function Careers() {
                 {filteredJobs.map((job) => (
                   <div
                     key={job._id}
-                    onClick={() => navigate(`/apply/${job._id}`)}
-                    className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-sm cursor-pointer transition-all duration-200 hover:border-[#223B5B] hover:shadow-lg"
+                    className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-sm cursor-default transition-all duration-200 hover:border-[#223B5B] hover:shadow-lg"
                   >
                     {/* Accent Dot */}
                     <span className="w-2 h-2 rounded-full bg-[#2596BE] flex-shrink-0" />
@@ -171,16 +224,39 @@ export default function Careers() {
                     </div>
 
                     {/* Apply Button (hidden on mobile) */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/apply/${job._id}`);
-                      }}
-                      className="hidden md:flex px-5 py-2 text-xs font-semibold tracking-wide uppercase border border-[#223B5B] text-[#223B5B] rounded-sm group-hover:bg-[#223B5B] group-hover:text-white transition-all flex-shrink-0"
-                    >
-                      Apply Now
-                    </button>
+                    {user?.role === 'employee'
+                      ? null
+                      : user && ['admin', 'super-admin', 'hr'].includes(user.role)
+                        ? null
+                        : <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const blockedAdminRoles = ['admin', 'super-admin', 'hr']
+                              
+                              if (user && blockedAdminRoles.includes(user.role)) {
+                                return
+                              }
+
+                              if (user?.role === 'employee') {
+                                setEmployeeBlockMessage('You are already an employee. Contact HR for internal transfers.')
+                                return
+                              }
+
+                              if (!user) {
+                                setPendingJob(job);
+                                setSelectedJob(job);
+                                setAuthModalOpen(true);
+                              } else {
+                                setSelectedJob(job);
+                                setApplyModalOpen(true);
+                              }
+                            }}
+                            className="hidden md:flex px-5 py-2 text-xs font-semibold tracking-wide uppercase border border-[#223B5B] text-[#223B5B] rounded-sm group-hover:bg-[#223B5B] group-hover:text-white transition-all flex-shrink-0"
+                          >
+                            Apply Now
+                          </button>
+                    }
 
                     {/* Arrow */}
                     <span className="text-gray-300 ml-3 flex-shrink-0 transition-all group-hover:text-[#223B5B] group-hover:translate-x-1">
@@ -193,6 +269,46 @@ export default function Careers() {
           )}
         </div>
       </section>
+
+      {authModalOpen ? (
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => {
+            setAuthModalOpen(false);
+            setPendingJob(null);
+          }}
+          onSuccess={handleAuthSuccess}
+        />
+      ) : null}
+
+      {applyModalOpen ? (
+        <ApplyModal
+          isOpen={applyModalOpen}
+          onClose={() => {
+            setApplyModalOpen(false);
+            setSelectedJob(null);
+          }}
+          job={selectedJob}
+          alreadyApplied={
+            selectedJob
+              ? appliedJobIds.includes(String(selectedJob._id))
+              : false
+          }
+          onSuccess={handleApplySuccess}
+        />
+      ) : null}
+
+      {employeeBlockMessage !== '' ? (
+        <div className="fixed bottom-4 right-4 bg-yellow-600 text-white px-4 py-3 rounded-lg shadow-lg z-40 text-sm max-w-sm">
+          {employeeBlockMessage}
+          <button
+            onClick={() => setEmployeeBlockMessage('')}
+            className="ml-3 font-bold hover:opacity-70"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

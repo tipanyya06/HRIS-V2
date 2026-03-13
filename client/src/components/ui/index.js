@@ -8,3 +8,5 @@ export { default as Modal } from './Modal';
 export { default as Card } from './Card';
 export { default as PageHeader } from './PageHeader';
 export { default as Toast } from './Toast';
+export { default as AuthModal } from './AuthModal';
+export { default as ApplyModal } from './ApplyModal';
