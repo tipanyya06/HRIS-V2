@@ -32,9 +32,14 @@ export const createInterviewController = async (req, res, next) => {
       jobId,
     });
 
-    // Notify applicant of interview scheduling (silent fail)
+    // Notify applicant user account of interview scheduling (silent fail)
     try {
-      if (interview.applicantId?.userId) {
+      if (interview.applicantId) {
+        const applicant = await Applicant.findById(interview.applicantId)
+          .select('userId')
+          .lean();
+
+        if (applicant?.userId) {
         const interviewDate = new Date(interview.scheduledAt).toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
@@ -42,12 +47,13 @@ export const createInterviewController = async (req, res, next) => {
           day: 'numeric',
         });
         await createNotification(
-          interview.applicantId.userId,
+          applicant.userId,
           'interview_scheduled',
           'Interview Scheduled',
-          `Your interview for ${interview.jobId?.title || 'a position'} is scheduled for ${interviewDate}`,
+          `Your interview is scheduled for ${interviewDate}`,
           '/applicant/applications'
         );
+        }
       }
     } catch (notifErr) {
       logger.error('Notification error:', notifErr);

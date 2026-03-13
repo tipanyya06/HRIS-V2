@@ -59,6 +59,19 @@ export const updateRequestStatusController = async (req, res, next) => {
       status,
       adminNote,
     });
+
+    try {
+      await createNotification(
+        updated.userId,
+        'request_updated',
+        'Request Status Updated',
+        `Your request "${updated.subject}" is now ${updated.status}`,
+        '/employee/requests'
+      );
+    } catch (notifErr) {
+      logger.error('Notification error:', notifErr);
+    }
+
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
     next(error);
