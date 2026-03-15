@@ -4,6 +4,7 @@ import {
 	createInterviewController,
 	getInterviewsController,
 	updateInterviewStatusController,
+	scheduleInterviewController,
 	getMyInterviewsController,
 } from './interviews.controller.js';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
@@ -15,11 +16,18 @@ router.post('/', createInterviewController);
 router.get(
 	'/',
 	verifyToken,
-	requireRole(['admin', 'super-admin', 'hr']),
+	requireRole('admin', 'super-admin'),
 	getInterviewsController
 );
 
 router.get('/my', verifyToken, getMyInterviewsController);
+
+router.patch(
+	'/:id/schedule',
+	verifyToken,
+	requireRole('admin', 'super-admin'),
+	scheduleInterviewController
+);
 
 router.patch(
 	'/:id/status',

@@ -71,19 +71,9 @@ export const createInterviewController = async (req, res, next) => {
 
 export const getInterviewsController = async (req, res, next) => {
   try {
-    const { month, year, status } = req.query;
+    const interviews = await interviewService.getInterviews(req.query);
 
-    const interviews = await interviewService.getInterviews({
-      month,
-      year,
-      status,
-    });
-
-    res.status(200).json({
-      success: true,
-      count: interviews.length,
-      data: interviews,
-    });
+    res.status(200).json(interviews);
   } catch (error) {
     next(error);
   }
@@ -103,6 +93,27 @@ export const updateInterviewStatusController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Interview status updated successfully',
+      data: interview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const scheduleInterviewController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { scheduledAt, timezone, meetingLink } = req.body;
+
+    const interview = await interviewService.scheduleInterview(id, {
+      scheduledAt,
+      timezone,
+      meetingLink,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Interview scheduled successfully',
       data: interview,
     });
   } catch (error) {
