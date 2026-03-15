@@ -771,20 +771,20 @@ export default function Interviews() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <Card className="border border-slate-200">
-          <p className="text-xs text-slate-500 mb-1">Total active</p>
-          <p className="text-2xl font-semibold text-slate-900">{stats.active}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">TOTAL ACTIVE</p>
+          <p className="text-2xl font-bold text-[#223B5B]">{stats.active}</p>
         </Card>
         <Card className="border border-slate-200">
-          <p className="text-xs text-slate-500 mb-1">Needs scheduling</p>
-          <p className="text-2xl font-semibold text-slate-900">{stats.pending}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">NEEDS SCHEDULING</p>
+          <p className="text-2xl font-bold text-[#223B5B]">{stats.pending}</p>
         </Card>
         <Card className="border border-slate-200">
-          <p className="text-xs text-slate-500 mb-1">Scheduled</p>
-          <p className="text-2xl font-semibold text-slate-900">{stats.scheduled}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">SCHEDULED</p>
+          <p className="text-2xl font-bold text-[#223B5B]">{stats.scheduled}</p>
         </Card>
         <Card className="border border-slate-200">
-          <p className="text-xs text-slate-500 mb-1">Completed</p>
-          <p className="text-2xl font-semibold text-slate-900">{stats.completed}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">COMPLETED</p>
+          <p className="text-2xl font-bold text-[#223B5B]">{stats.completed}</p>
         </Card>
       </div>
 
