@@ -129,27 +129,26 @@ export const createInterview = async ({
   }
 };
 
-export const getInterviews = async ({ month, year, status }) => {
+export const getInterviews = async (filters = {}) => {
   try {
     const query = {};
 
-    if (status) {
-      query.status = status;
+    if (filters.status) {
+      query.status = filters.status;
+    } else {
+      query.status = { $in: ['pending', 'scheduled', 'rescheduled'] };
     }
 
-    if (month && year) {
-      const monthNum = Number(month);
-      const yearNum = Number(year);
-      if (monthNum >= 1 && monthNum <= 12 && yearNum > 0) {
-        const startDate = new Date(yearNum, monthNum - 1, 1, 0, 0, 0, 0);
-        const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59, 999);
-        query.scheduledAt = { $gte: startDate, $lte: endDate };
-      }
-    }
+    if (filters.jobId) query.jobId = filters.jobId;
+    if (filters.applicantId) query.applicantId = filters.applicantId;
 
     const interviews = await InterviewSchedule.find(query)
-      .sort({ scheduledAt: 1 })
-      .limit(500);
+      .populate('applicantId', 'fullName email stage')
+      .populate('jobId', 'title department')
+      .populate('adminId', 'email personalInfo')
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .lean();
 
     return interviews;
   } catch (error) {
@@ -178,6 +177,43 @@ export const updateInterviewStatus = async (interviewId, status) => {
     return updated;
   } catch (error) {
     logger.error(`Update interview status error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const scheduleInterview = async (interviewId, { scheduledAt, timezone, meetingLink }) => {
+  try {
+    if (!scheduledAt) {
+      throw createError(400, 'scheduledAt is required');
+    }
+
+    const parsedDate = new Date(scheduledAt);
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw createError(400, 'Invalid scheduledAt value');
+    }
+
+    const updated = await InterviewSchedule.findByIdAndUpdate(
+      interviewId,
+      {
+        scheduledAt: parsedDate,
+        timezone: timezone || 'Asia/Manila',
+        meetingLink: meetingLink || null,
+        status: 'scheduled',
+      },
+      { new: true, runValidators: true }
+    )
+      .populate('applicantId', 'fullName email stage')
+      .populate('jobId', 'title department')
+      .populate('adminId', 'email personalInfo')
+      .lean();
+
+    if (!updated) {
+      throw createError(404, 'Interview not found');
+    }
+
+    return updated;
+  } catch (error) {
+    logger.error(`Schedule interview error: ${error.message}`);
     throw error;
   }
 };

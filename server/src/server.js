@@ -53,6 +53,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       'http://localhost:5177',
       'http://localhost:5178',
       'http://localhost:3000',
+      'http://localhost:5000',
     ];
 
 app.use(cors({

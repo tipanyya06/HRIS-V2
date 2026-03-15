@@ -1,6 +1,7 @@
 import Applicant from './applicant.model.js';
 import Job from '../jobs/job.model.js';
 import User from '../auth/user.model.js';
+import InterviewSchedule from '../interviews/interviewSchedule.model.js';
 import { logger } from '../../utils/logger.js';
 
 const createError = (status, message) => {
@@ -179,6 +180,69 @@ export const updateStage = async (
 
     // Update stage
     applicant.stage = newStage;
+
+    // -- INTERVIEW SCHEDULE LIFECYCLE STANDARD ---------------------------------
+    // interviewSchedule records are tied to the applicant's current stage.
+    //
+    // Stage -> interview:
+    //   Check for any ACTIVE record (status: pending/scheduled/rescheduled).
+    //   If none exists -> create a new record with status: pending.
+    //   If one already exists -> do nothing (preserve existing schedule).
+    //   This prevents duplicate records when an applicant is re-staged to interview.
+    //
+    // Stage -> applied or screening:
+    //   Cancel all active interview records for this applicant.
+    //   This cleans up stale records from the Interviews tab.
+    //
+    // Stage -> rejected:
+    //   Cancel all active interview records for this applicant.
+    //
+    // Stage -> offer or hired:
+    //   Do NOT touch interview records. They are kept as audit history.
+    //
+    // Active = status is one of: pending, scheduled, rescheduled
+    // Inactive = status is one of: cancelled, completed
+    // -------------------------------------------------------------------------
+
+    if (newStage === 'interview') {
+      const existingActive = await InterviewSchedule.findOne({
+        applicantId: applicant._id,
+        status: { $in: ['pending', 'scheduled', 'rescheduled'] },
+      }).lean();
+
+      if (!existingActive) {
+        await InterviewSchedule.create({
+          applicantId: applicant._id,
+          jobId: applicant.jobId,
+          adminId,
+          status: 'pending',
+          scheduledAt: null,
+          timezone: null,
+          meetingLink: null,
+          notes: '',
+        });
+      }
+    }
+
+    if (newStage === 'applied' || newStage === 'screening') {
+      await InterviewSchedule.updateMany(
+        {
+          applicantId: applicant._id,
+          status: { $in: ['pending', 'scheduled', 'rescheduled'] },
+        },
+        { $set: { status: 'cancelled' } }
+      );
+    }
+
+    if (newStage === 'rejected') {
+      await InterviewSchedule.updateMany(
+        {
+          applicantId: applicant._id,
+          status: { $in: ['pending', 'scheduled', 'rescheduled'] },
+        },
+        { $set: { status: 'cancelled' } }
+      );
+    }
 
     // If hired, mark as employee and remove TTL
     if (newStage === 'hired') {
