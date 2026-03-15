@@ -173,6 +173,16 @@ const ApplicantDashboard = () => {
           isOpen={applyModalOpen}
           onClose={() => setApplyModalOpen(false)}
           job={selectedJob}
+          alreadyApplied={
+            Array.isArray(applications)
+              ? applications.some((app) => {
+                  const appJobId = typeof app.jobId === 'string'
+                    ? app.jobId
+                    : app.jobId?._id
+                  return appJobId === selectedJob?._id
+                })
+              : false
+          }
           onSuccess={() => {
             setApplyModalOpen(false)
             fetchDashboardData()

@@ -28,9 +28,11 @@ const ApplyModal = ({ isOpen, onClose, job, onSuccess, alreadyApplied = false })
   useEffect(() => {
     if (isOpen) {
       setError('')
+      setResumeError('')
       setCoverLetter('')
       setPhone('')
       setResumeFile(null)
+      setSubmitted(false)
     }
   }, [isOpen])
 

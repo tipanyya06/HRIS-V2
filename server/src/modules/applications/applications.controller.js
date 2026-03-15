@@ -6,6 +6,12 @@ import {
   createBulkNotifications,
 } from '../notifications/notification.service.js';
 
+const createError = (status, message) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
 // POST /api/applications — Submit application (authenticated applicants only)
 export const createApplicationController = async (req, res) => {
   try {
@@ -102,14 +108,23 @@ export const createApplicationController = async (req, res) => {
 // Legacy: POST /api/applications-public — Submit application (public form only)
 export const submitApplicationController = async (req, res, next) => {
   try {
+    // Input validation
+    const { jobId, coverLetter } = req.body;
+
+    if (!jobId) {
+      return next(createError(400, 'jobId is required'));
+    }
+
+    if (!coverLetter || typeof coverLetter !== 'string' || coverLetter.trim().length < 50) {
+      return next(createError(400, 'Cover letter must be at least 50 characters'));
+    }
+
     const {
-      jobId,
       // Old public flow fields (ApplyForm)
       fullName,
       email,
       phone,
       // New modal flow fields (ApplyModal — logged-in applicant)
-      coverLetter,
       resumeUrl,
       // userId is NEVER trusted from req.body — always use req.user if present
     } = req.body;

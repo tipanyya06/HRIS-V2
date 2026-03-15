@@ -207,7 +207,7 @@ export default function Home() {
               {filteredJobs.map((job) => (
                 <div
                   key={job._id}
-                  onClick={() => navigate(`/apply/${job._id}`)}
+                  onClick={() => navigate('/careers')}
                   className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-sm cursor-pointer transition-all duration-200 hover:border-[#223B5B] hover:shadow-md hover:translate-x-0.5"
                 >
                   <span className="w-2 h-2 rounded-full bg-[#2596BE] flex-shrink-0" />
