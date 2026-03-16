@@ -195,11 +195,7 @@ function UpcomingList({ interviews, onSelect }) {
     .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))
     .slice(0, 5);
 
-  const pendingUnscheduled = interviews
-    .filter((e) => e.status === 'pending' && !e.scheduledAt)
-    .slice(0, 3);
-
-  const hasAnything = upcoming.length > 0 || pendingUnscheduled.length > 0;
+  const hasAnything = upcoming.length > 0;
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 flex-1">
@@ -209,35 +205,8 @@ function UpcomingList({ interviews, onSelect }) {
         <p className="text-xs text-slate-400 py-4 text-center">No upcoming interviews</p>
       ) : null}
 
-      {pendingUnscheduled.length > 0 ? (
-        <div className="mb-3">
-          <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wide mb-1.5">Needs scheduling</p>
-          {pendingUnscheduled.map((ev) => {
-            const sty = STATUS_STYLE.pending;
-            return (
-              <button
-                key={ev._id}
-                onClick={() => onSelect(ev)}
-                className="w-full flex gap-3 py-2.5 border-b border-slate-100 last:border-0 text-left hover:bg-amber-50 rounded-lg px-1 transition-colors"
-              >
-                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${sty.dot}`} />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-slate-800 truncate">
-                    {ev.applicantId?.fullName || 'Candidate'}
-                  </p>
-                  <p className="text-[11px] text-amber-600">Tap to schedule</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       {upcoming.length > 0 ? (
         <div>
-          {pendingUnscheduled.length > 0 ? (
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide mb-1.5">Scheduled</p>
-          ) : null}
           {upcoming.map((ev) => {
             const d   = new Date(ev.scheduledAt);
             const sty = STATUS_STYLE[ev.status] || STATUS_STYLE.scheduled;

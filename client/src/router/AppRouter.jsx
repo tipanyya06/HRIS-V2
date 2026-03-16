@@ -19,33 +19,32 @@ import AboutUs from '../pages/public/AboutUs';
 import ContactUs from '../pages/public/ContactUs';
 
 // Pages - Admin
-import Dashboard from '../pages/admin/Dashboard';
-import Jobs from '../pages/admin/Jobs';
-import Applicants from '../pages/admin/Applicants';
-import ATS from '../pages/admin/ATS';
-import Employees from '../pages/admin/Employees';
-import Interviews from '../pages/admin/Interviews';
-import Training from '../pages/admin/Training';
-import Reports from '../pages/admin/Reports';
-import Announcements from '../pages/admin/Announcements';
+import Dashboard from '../pages/admin/AdminDashboard';
+import Jobs from '../pages/admin/AdminJobs';
+import Applicants from '../pages/admin/AdminApplicants';
+import ATS from '../pages/admin/AdminATS';
+import Employees from '../pages/admin/AdminEmployees';
+import Interviews from '../pages/admin/AdminInterviews';
+import Training from '../pages/admin/AdminTraining';
+import Reports from '../pages/admin/AdminReports';
+import Announcements from '../pages/admin/AdminAnnouncements';
 import AdminList from '../pages/admin/AdminList';
-import ActivityLogs from '../pages/admin/ActivityLogs';
+import ActivityLogs from '../pages/admin/AdminActivityLogs';
 import AdminRequests from '../pages/admin/AdminRequests';
 
 // Pages - Employee
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
-import EmployeeProfile from '../pages/employee/Profile';
-import EmployeeRequests from '../pages/employee/EmployeeRequests';
-import EmployeeDocuments from '../pages/employee/Documents';
-import EmployeeAnnouncements from '../pages/employee/Announcements';
-import EmployeeContactHR from '../pages/employee/ContactHR';
+import EmployeeProfile from '../pages/employee/EmployeeProfile';
+import EmployeeDocuments from '../pages/employee/EmployeeDocuments';
+import EmployeeAnnouncements from '../pages/employee/EmployeeAnnouncements';
+import EmployeeContactHR from '../pages/employee/EmployeeContactHR';
 import EmployeeTraining from '../pages/employee/EmployeeTraining';
 
 // Pages - Applicant & Auth
 import ApplicantLayout from '../pages/applicant/ApplicantLayout';
 import ApplicantDashboard from '../pages/applicant/ApplicantDashboard';
 import MyApplications from '../pages/applicant/MyApplications';
-import SavedJobs from '../pages/applicant/SavedJobs';
+import SavedJobs from '../pages/applicant/ApplicantSavedJobs';
 import ApplicantInterviews from '../pages/applicant/ApplicantInterviews';
 import PendingApproval from '../pages/auth/PendingApproval';
 
@@ -179,7 +178,6 @@ export default function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="profile" element={<EmployeeProfile />} />
-          <Route path="requests" element={<EmployeeRequests />} />
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="contact-hr" element={<EmployeeContactHR />} />
           <Route path="documents" element={<EmployeeDocuments />} />

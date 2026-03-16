@@ -87,7 +87,7 @@ export default function Announcements() {
                     {announcement.title}
                   </h3>
                   <p className="text-gray-600 mt-2 text-sm">
-                    {getPreview(announcement.content)}
+                    {getPreview(announcement.body)}
                   </p>
                   <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
                     <div className="flex items-center gap-1">
@@ -154,7 +154,7 @@ export default function Announcements() {
             </div>
             <div className="p-6">
               <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-                {selectedAnnouncement.content}
+                {selectedAnnouncement.body}
               </div>
             </div>
           </div>

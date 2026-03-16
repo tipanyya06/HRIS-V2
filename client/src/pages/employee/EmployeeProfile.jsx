@@ -23,7 +23,7 @@ const maskValue = (value) => {
   return strVal.length > 4 ? `****-${strVal.slice(-4)}` : '****-****';
 };
 
-export default function Profile() {
+export default function EmployeeProfile() {
   const { user } = useAuthStore();
   const [employee, setEmployee] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

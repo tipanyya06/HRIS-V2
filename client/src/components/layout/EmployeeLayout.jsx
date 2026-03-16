@@ -18,7 +18,6 @@ import { useState } from 'react';
 const navigationItems = [
   { label: 'Dashboard', path: '/employee/dashboard', icon: LayoutDashboard },
   { label: 'My Profile', path: '/employee/profile', icon: User },
-  { label: 'Requests', path: '/employee/requests', icon: MessageSquare },
   { label: 'Announcements', path: '/employee/announcements', icon: Bell },
   { label: 'Contact HR', path: '/employee/contact-hr', icon: MessageSquare },
   { label: 'Training', path: '/employee/training', icon: GraduationCap },

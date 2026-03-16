@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../lib/api';
 import {
   Badge,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 const MEETING_TYPES = [
@@ -56,6 +57,10 @@ export default function ContactHR() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [myRequests, setMyRequests] = useState([]);
+  const [isLoadingReqs, setIsLoadingReqs] = useState(false);
+  const [reqError, setReqError] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   // Meeting Request State
   const [meetingForm, setMeetingForm] = useState({
@@ -109,28 +114,59 @@ export default function ContactHR() {
     reporterContact: '',
   });
 
+  const fetchMyRequests = useCallback(async () => {
+    try {
+      setIsLoadingReqs(true);
+      setReqError('');
+      const res = await api.get('/requests/my');
+      setMyRequests(res.data.data || []);
+    } catch (err) {
+      setReqError(extractErrorMessage(err, 'Failed to load your requests'));
+    } finally {
+      setIsLoadingReqs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMyRequests();
+  }, [fetchMyRequests]);
+
   const handleMeetingSubmit = async (e) => {
     e.preventDefault();
-    if (!meetingForm.subject || !meetingForm.preferredDate) {
-      setToastMessage('Please fill in required fields');
+    if (!meetingForm.subject.trim()) {
+      setToastMessage('Subject is required');
+      setToastType('error');
+      return;
+    }
+    if (!meetingForm.preferredDate) {
+      setToastMessage('Preferred date is required');
+      setToastType('error');
+      return;
+    }
+    if (!meetingForm.preferredTime) {
+      setToastMessage('Preferred time is required');
+      setToastType('error');
+      return;
+    }
+    if (!meetingForm.agenda.trim()) {
+      setToastMessage('Agenda is required');
       setToastType('error');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await api.post('/requests/meeting', {
-        type: meetingForm.type,
-        preferredDate: meetingForm.preferredDate,
-        preferredTime: meetingForm.preferredTime,
-        location: meetingForm.location,
-        subject: meetingForm.subject,
-        agenda: meetingForm.agenda,
-        preparation: meetingForm.preparation,
+      await api.post('/requests', {
+        type: 'meeting',
+        subject: `Meeting Request - ${meetingForm.preferredDate}`,
+        message: meetingForm.agenda || meetingForm.subject,
+        date: meetingForm.preferredDate || undefined,
+        priority: 'normal',
       });
 
       setToastType('success');
       setToastMessage('Meeting request submitted successfully');
+      fetchMyRequests();
       setMeetingForm({
         type: 'general',
         preferredDate: '',
@@ -150,30 +186,45 @@ export default function ContactHR() {
 
   const handleTARFSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !tarfForm.reportingTo ||
-      !tarfForm.department ||
-      !tarfForm.positionTitle
-    ) {
-      setToastMessage('Please fill in required fields');
+    if (!tarfForm.reportingTo.trim()) {
+      setToastMessage('Reporting To is required');
+      setToastType('error');
+      return;
+    }
+    if (!tarfForm.department.trim()) {
+      setToastMessage('Department is required');
+      setToastType('error');
+      return;
+    }
+    if (!tarfForm.positionTitle.trim()) {
+      setToastMessage('Position Title is required');
+      setToastType('error');
+      return;
+    }
+    if (!tarfForm.targetStartDate) {
+      setToastMessage('Target start date is required');
+      setToastType('error');
+      return;
+    }
+    if (!tarfForm.roleDescription.trim()) {
+      setToastMessage('Role Description is required');
       setToastType('error');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await api.post('/requests/talent', {
-        reportingTo: tarfForm.reportingTo,
-        department: tarfForm.department,
-        positionTitle: tarfForm.positionTitle,
-        headcountNeeded: parseInt(tarfForm.headcountNeeded),
-        employmentType: tarfForm.employmentType,
-        roleDescription: tarfForm.roleDescription,
-        targetStartDate: tarfForm.targetStartDate,
+      await api.post('/requests', {
+        type: 'talent',
+        subject: `TARF Request - ${tarfForm.positionTitle} - ${tarfForm.targetStartDate}`,
+        message: tarfForm.roleDescription,
+        date: tarfForm.targetStartDate || undefined,
+        priority: 'normal',
       });
 
       setToastType('success');
       setToastMessage('TARF request submitted successfully');
+      fetchMyRequests();
       setTarfForm({
         reportingTo: '',
         department: '',
@@ -193,33 +244,51 @@ export default function ContactHR() {
 
   const handleOshaSubmit = async (e) => {
     e.preventDefault();
-    if (!oshaForm.incidentDate || !oshaForm.incidentTime || !oshaForm.incidentLocation || !oshaForm.incidentType || !oshaForm.description) {
+    if (!oshaForm.incidentDate || !oshaForm.incidentTime || !oshaForm.location.trim() || !oshaForm.incidentType || !oshaForm.description.trim()) {
       setToastMessage('Please fill in all required fields');
       setToastType('error');
       return;
     }
 
-    if (oshaForm.description.length < 50) {
+    if (oshaForm.description.trim().length < 50) {
       setToastMessage('Description must be at least 50 characters');
+      setToastType('error');
+      return;
+    }
+    if (!oshaForm.injuries.trim()) {
+      setToastMessage('Injuries field is required');
+      setToastType('error');
+      return;
+    }
+    if (!oshaForm.immediateActions.trim()) {
+      setToastMessage('Corrective/Immediate Actions are required');
+      setToastType('error');
+      return;
+    }
+    if (!oshaForm.reporterName.trim()) {
+      setToastMessage('Reported To name is required');
+      setToastType('error');
+      return;
+    }
+    if (!oshaForm.reporterContact.trim()) {
+      setToastMessage('Contact Information is required');
       setToastType('error');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await api.post('/reports/osha', {
-        incidentDate: oshaForm.incidentDate,
-        incidentTime: oshaForm.incidentTime,
-        incidentLocation: oshaForm.location,
-        incidentType: oshaForm.incidentType === 'injury' ? 'Equipment Injury' : oshaForm.incidentType === 'near-miss' ? 'Near Miss' : oshaForm.incidentType === 'property-damage' ? 'Property Damage' : 'Other',
-        description: oshaForm.description,
-        witnesses: oshaForm.employeesInvolved || undefined,
-        correctiveActions: oshaForm.immediateActions || undefined,
-        reportedTo: oshaForm.reporterName || undefined,
+      await api.post('/requests', {
+        type: 'incident',
+        subject: `OSHA Report - ${oshaForm.incidentDate}`,
+        message: oshaForm.description,
+        date: oshaForm.incidentDate || undefined,
+        priority: 'urgent',
       });
 
       setToastType('success');
       setToastMessage('OSHA report submitted successfully');
+      fetchMyRequests();
       setOshaForm({
         incidentType: 'injury',
         incidentDate: '',
@@ -242,7 +311,7 @@ export default function ContactHR() {
 
   const handleIncidentSubmit = async (e) => {
     e.preventDefault();
-    if (!incidentForm.incidentDate || !incidentForm.incidentTime || !incidentForm.location || !incidentForm.incidentType || !incidentForm.severity || !incidentForm.description || !incidentForm.immediateActions) {
+    if (!incidentForm.incidentDate || !incidentForm.incidentTime || !incidentForm.location.trim() || !incidentForm.incidentType || !incidentForm.severity || !incidentForm.description.trim() || !incidentForm.immediateActions.trim()) {
       setToastMessage('Please fill in all required fields');
       setToastType('error');
       return;
@@ -250,20 +319,17 @@ export default function ContactHR() {
 
     try {
       setIsSubmitting(true);
-      await api.post('/reports/incident', {
-        incidentDate: incidentForm.incidentDate,
-        incidentTime: incidentForm.incidentTime,
-        incidentLocation: incidentForm.location,
-        incidentType: incidentForm.incidentType === 'injury' ? 'Security Breach' : incidentForm.incidentType === 'near-miss' ? 'Harassment' : incidentForm.incidentType === 'property-damage' ? 'Property Damage' : 'Other',
-        severityLevel: incidentForm.severity,
-        reportedTo: incidentForm.reporterName || 'HR Department',
-        description: incidentForm.description,
-        witnesses: incidentForm.witnesses || undefined,
-        immediateActionsTaken: incidentForm.immediateActions,
+      await api.post('/requests', {
+        type: 'incident',
+        subject: `Incident Report - ${incidentForm.incidentType} - ${incidentForm.incidentDate}`,
+        message: incidentForm.description,
+        date: incidentForm.incidentDate || undefined,
+        priority: incidentForm.severity === 'critical' || incidentForm.severity === 'high' ? 'urgent' : 'normal',
       });
 
       setToastType('success');
       setToastMessage('Incident report submitted successfully');
+      fetchMyRequests();
       setIncidentForm({
         incidentType: 'injury',
         incidentDate: '',
@@ -406,13 +472,12 @@ export default function ContactHR() {
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Preferred Time
+                    Preferred Time *
                   </label>
                   <input
                     type="time"
@@ -430,7 +495,7 @@ export default function ContactHR() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Agenda
+                  Agenda *
                 </label>
                 <textarea
                   value={meetingForm.agenda}
@@ -487,7 +552,6 @@ export default function ContactHR() {
                     }
                     placeholder="Manager name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
 
@@ -503,7 +567,6 @@ export default function ContactHR() {
                     }
                     placeholder="e.g., Engineering, Sales"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
               </div>
@@ -520,7 +583,6 @@ export default function ContactHR() {
                   }
                   placeholder="Job title"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 />
               </div>
 
@@ -588,7 +650,7 @@ export default function ContactHR() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Start Date
+                  Target Start Date *
                 </label>
                 <input
                   type="date"
@@ -646,7 +708,6 @@ export default function ContactHR() {
                       setOshaForm({ ...oshaForm, incidentDate: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
               </div>
@@ -663,7 +724,6 @@ export default function ContactHR() {
                       setOshaForm({ ...oshaForm, incidentTime: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
 
@@ -703,7 +763,7 @@ export default function ContactHR() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Witnesses/Employees Involved
+                    Witnesses/Employees Involved — Optional
                   </label>
                   <input
                     type="text"
@@ -721,7 +781,7 @@ export default function ContactHR() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Injuries (if any)
+                    Injuries (if any) *
                   </label>
                   <input
                     type="text"
@@ -737,7 +797,7 @@ export default function ContactHR() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Corrective/Immediate Actions Taken
+                  Corrective/Immediate Actions Taken *
                 </label>
                 <textarea
                   value={oshaForm.immediateActions}
@@ -756,7 +816,7 @@ export default function ContactHR() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reported To (Name)
+                    Reported To (Name) *
                   </label>
                   <input
                     type="text"
@@ -771,7 +831,7 @@ export default function ContactHR() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contact Information
+                    Contact Information *
                   </label>
                   <input
                     type="text"
@@ -860,7 +920,6 @@ export default function ContactHR() {
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
 
@@ -878,7 +937,6 @@ export default function ContactHR() {
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
               </div>
@@ -920,7 +978,7 @@ export default function ContactHR() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Witnesses
+                  Witnesses — Optional
                 </label>
                 <textarea
                   value={incidentForm.witnesses}
@@ -957,7 +1015,7 @@ export default function ContactHR() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reported To (Name/Title)
+                  Reported To (Name/Title) — Optional
                 </label>
                 <input
                   type="text"
@@ -984,6 +1042,63 @@ export default function ContactHR() {
           )}
         </div>
       </Card>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">My Submissions</h2>
+
+        {isLoadingReqs ? (
+          <LoadingSpinner />
+        ) : reqError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+            {reqError}
+          </div>
+        ) : myRequests.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+            No requests submitted yet.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {myRequests.map((req) => (
+              <div key={req._id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setExpandedId(expandedId === req._id ? null : req._id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      req.status === 'approved' ? 'bg-green-100 text-green-800'
+                      : req.status === 'rejected' ? 'bg-red-100 text-red-800'
+                      : req.status === 'reviewed' ? 'bg-blue-100 text-blue-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {req.status || 'pending'}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{req.subject}</p>
+                      <p className="text-xs text-gray-400">
+                        {req.type} · {new Date(req.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  {expandedId === req._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+
+                {expandedId === req._id ? (
+                  <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{req.message}</p>
+                    {req.adminNote ? (
+                      <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-blue-700 mb-1">HR Response</p>
+                        <p className="text-sm text-blue-800">{req.adminNote}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

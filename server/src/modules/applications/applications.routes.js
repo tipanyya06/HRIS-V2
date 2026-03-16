@@ -1,6 +1,6 @@
 import express from 'express';
 import * as applicationController from './applications.controller.js';
-import { verifyToken, requireRole } from '../../middleware/auth.js';
+import { verifyToken, optionalToken, requireRole } from '../../middleware/auth.js';
 import { formLimiter } from '../../middleware/rateLimiter.js';
 
 const router = express.Router();
@@ -8,7 +8,7 @@ const router = express.Router();
 // Authenticated applicant routes
 router.post(
   '/',
-  verifyToken,
+  optionalToken,
   formLimiter,
   applicationController.createApplicationController
 );
