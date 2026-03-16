@@ -12,8 +12,10 @@ const extractErrorMessage = (err, fallback) => {
 export default function ActivityLogs() {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -60,6 +62,40 @@ export default function ActivityLogs() {
       hour: '2-digit',
       minute: '2-digit',
     })}`;
+  };
+
+  const getActiveFilters = () => {
+    const filters = {};
+    if (search.trim()) filters.search = search.trim();
+    if (filterResource !== 'all') filters.resource = filterResource;
+    if (filterAction !== 'all') filters.action = filterAction;
+    if (dateFrom) filters.dateFrom = dateFrom;
+    if (dateTo) filters.dateTo = dateTo;
+    return filters;
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const response = await api.get('/logs/export/csv', {
+        params: getActiveFilters(),
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      const today = new Date().toISOString().split('T')[0];
+      link.href = url;
+      link.setAttribute('download', `activity-logs-${today}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to export activity logs'));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const fetchLogs = async () => {
@@ -157,6 +193,15 @@ export default function ActivityLogs() {
       key: 'ip',
       label: 'IP Address',
       render: (row) => <span className="text-xs text-gray-400 font-mono">{row.ip || '-'}</span>,
+    },
+    {
+      key: 'view',
+      label: 'View',
+      render: (row) => (
+        <Button size="sm" variant="secondary" onClick={() => setSelectedLog(row)}>
+          View
+        </Button>
+      ),
     },
   ];
 
@@ -274,6 +319,16 @@ export default function ActivityLogs() {
             Clear Filters
           </Button>
         ) : null}
+
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={handleExportCsv}
+          isLoading={isExporting}
+          isDisabled={isLoading || isExporting}
+        >
+          {isExporting ? 'Exporting...' : 'Export CSV'}
+        </Button>
       </div>
 
       {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
@@ -307,6 +362,30 @@ export default function ActivityLogs() {
           >
             Next
           </Button>
+        </div>
+      ) : null}
+
+      {selectedLog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white border border-gray-200 shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Log Details</h3>
+              <Button size="sm" variant="secondary" onClick={() => setSelectedLog(null)}>
+                Close
+              </Button>
+            </div>
+            <div className="px-6 py-4 space-y-3 text-sm">
+              <div><span className="font-semibold text-gray-700">Timestamp:</span> {formatDate(selectedLog.createdAt)}</div>
+              <div><span className="font-semibold text-gray-700">User:</span> {selectedLog.userId || 'system'}</div>
+              <div><span className="font-semibold text-gray-700">Email:</span> {selectedLog.userEmail || 'system'}</div>
+              <div><span className="font-semibold text-gray-700">Role:</span> {selectedLog.userRole || '-'}</div>
+              <div><span className="font-semibold text-gray-700">Action:</span> {selectedLog.action || '-'}</div>
+              <div><span className="font-semibold text-gray-700">Resource:</span> {selectedLog.resource || '-'}</div>
+              <div><span className="font-semibold text-gray-700">Resource ID:</span> {selectedLog.resourceId || '-'}</div>
+              <div><span className="font-semibold text-gray-700">Details:</span> {selectedLog.details || '-'}</div>
+              <div><span className="font-semibold text-gray-700">IP Address:</span> {selectedLog.ip || '-'}</div>
+            </div>
+          </div>
         </div>
       ) : null}
 

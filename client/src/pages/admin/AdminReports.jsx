@@ -12,14 +12,34 @@ export default function Reports() {
 
   const [activeTab, setActiveTab] = useState('ats');
   const [reportData, setReportData] = useState(null);
+  const [atsTrend, setAtsTrend] = useState([]);
+  const [hiringTrend, setHiringTrend] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTrendLoading, setIsTrendLoading] = useState(false);
   const [isExporting, setIsExporting] = useState('');
   const [error, setError] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [department, setDepartment] = useState('');
+
+  const getFilterParams = () => ({
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    department: department.trim() || undefined,
+  });
 
   // Fetch report data when tab changes
   useEffect(() => {
     fetchReportData(activeTab);
-  }, [activeTab]);
+  }, [activeTab, dateFrom, dateTo, department]);
+
+  useEffect(() => {
+    if (activeTab !== 'ats') {
+      return;
+    }
+
+    fetchATSTrends();
+  }, [activeTab, dateFrom, dateTo, department]);
 
   const fetchReportData = async (reportType) => {
     setIsLoading(true);
@@ -34,7 +54,7 @@ export default function Reports() {
         training: '/reports/training',
       };
 
-      const response = await api.get(endpoints[reportType]);
+      const response = await api.get(endpoints[reportType], { params: getFilterParams() });
       setReportData(response.data.data);
     } catch (err) {
       const message =
@@ -48,13 +68,39 @@ export default function Reports() {
     }
   };
 
+  const fetchATSTrends = async () => {
+    setIsTrendLoading(true);
+
+    try {
+      const params = getFilterParams();
+      const [atsRes, hiringRes] = await Promise.all([
+        api.get('/reports/trends/ats', { params }),
+        api.get('/reports/trends/hiring', { params }),
+      ]);
+
+      setAtsTrend(atsRes.data?.data || []);
+      setHiringTrend(hiringRes.data?.data || []);
+    } catch (err) {
+      setAtsTrend([]);
+      setHiringTrend([]);
+      const message =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to load trends';
+      setError(message);
+    } finally {
+      setIsTrendLoading(false);
+    }
+  };
+
   const handleExport = async (format) => {
     setIsExporting(format);
     try {
       const response = await api.get(
         `/reports/export/${format}`,
         {
-          params: { type: activeTab },
+          params: { type: activeTab, ...getFilterParams() },
           responseType: 'blob',
         }
       );
@@ -84,6 +130,29 @@ export default function Reports() {
           <p className="text-gray-600">Analytics and reporting for HR operations</p>
         </div>
         <BarChart3 size={32} className="text-blue-600" />
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white border border-gray-200 rounded-lg p-4">
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+        <input
+          type="text"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          placeholder="Department"
+          className="px-3 py-2 border border-gray-300 rounded text-sm"
+        />
       </div>
 
       {/* Tabs */}
@@ -168,6 +237,64 @@ export default function Reports() {
               <Card>
                 <h3 className="text-lg font-bold mb-2">Total Applicants</h3>
                 <p className="text-3xl font-bold text-blue-600">{reportData?.total || 0}</p>
+              </Card>
+
+              <Card>
+                <h3 className="text-lg font-bold mb-4">ATS Trend (Last 12 Months)</h3>
+                {isTrendLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader size={16} className="animate-spin" /> Loading trends...
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium">Month</th>
+                          <th className="px-4 py-2 text-left font-medium">Applications</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(atsTrend || []).map((row, idx) => (
+                          <tr key={`${row.month}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-2">{row.month}</td>
+                            <td className="px-4 py-2">{row.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+
+              <Card>
+                <h3 className="text-lg font-bold mb-4">Hiring Trend (Last 12 Months)</h3>
+                {isTrendLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader size={16} className="animate-spin" /> Loading trends...
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium">Month</th>
+                          <th className="px-4 py-2 text-left font-medium">Hired</th>
+                          <th className="px-4 py-2 text-left font-medium">Rejected</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(hiringTrend || []).map((row, idx) => (
+                          <tr key={`${row.month}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-2">{row.month}</td>
+                            <td className="px-4 py-2">{row.hired}</td>
+                            <td className="px-4 py-2">{row.rejected}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </Card>
             </>
           ) : (

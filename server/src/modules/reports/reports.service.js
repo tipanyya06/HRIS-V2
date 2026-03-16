@@ -8,6 +8,79 @@ import { logger } from '../../utils/logger.js';
 
 const STAGES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 
+const buildDateRangeFilter = (filters = {}) => {
+  const { dateFrom, dateTo } = filters;
+
+  if (!dateFrom && !dateTo) {
+    return {};
+  }
+
+  const fromDate = dateFrom ? new Date(dateFrom) : null;
+  const toDate = dateTo ? new Date(dateTo) : null;
+
+  if ((fromDate && Number.isNaN(fromDate.getTime())) || (toDate && Number.isNaN(toDate.getTime()))) {
+    return {};
+  }
+
+  if (fromDate && toDate && fromDate > toDate) {
+    const error = new Error('dateFrom cannot be after dateTo');
+    error.status = 400;
+    throw error;
+  }
+
+  const createdAt = {};
+  if (fromDate) createdAt.$gte = fromDate;
+  if (toDate) createdAt.$lte = toDate;
+
+  return Object.keys(createdAt).length > 0 ? { createdAt } : {};
+};
+
+const parseDateOrNull = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getTrendWindow = (filters = {}) => {
+  const fromInput = parseDateOrNull(filters.dateFrom);
+  const toInput = parseDateOrNull(filters.dateTo);
+
+  if (fromInput && toInput && fromInput > toInput) {
+    const error = new Error('dateFrom cannot be after dateTo');
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const rangeStart = fromInput && fromInput > start ? fromInput : start;
+  const rangeEnd = toInput && toInput < end ? toInput : end;
+
+  if (rangeStart > rangeEnd) {
+    return null;
+  }
+
+  return { rangeStart, rangeEnd };
+};
+
+const buildMonthBuckets = (rangeStart, rangeEnd) => {
+  const buckets = [];
+  const cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+  const limit = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), 1);
+
+  while (cursor <= limit) {
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, '0');
+    const key = `${year}-${month}`;
+    buckets.push({ key, month: key });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return buckets;
+};
+
 export const getDashboardStats = async () => {
   try {
     const now = new Date();
@@ -121,12 +194,17 @@ export const getDashboardStats = async () => {
  * Get ATS (Applicant Tracking System) report
  * Aggregate applications by stage with counts
  */
-export const getATSReport = async () => {
+export const getATSReport = async (filters = {}) => {
   try {
+    const baseFilter = buildDateRangeFilter(filters);
+
     const stageCounts = await Promise.all(
       STAGES.map(async (stage) => ({
         stage,
-        count: await Applicant.countDocuments({ stage }),
+        count: await Applicant.countDocuments({
+          ...baseFilter,
+          stage,
+        }),
       }))
     );
 
@@ -152,10 +230,19 @@ export const getATSReport = async () => {
  * Get headcount report
  * Aggregate employees by department
  */
-export const getHeadcountReport = async () => {
+export const getHeadcountReport = async (filters = {}) => {
   try {
+    const baseMatch = {
+      role: 'employee',
+      ...buildDateRangeFilter(filters),
+    };
+
+    if (filters.department) {
+      baseMatch.department = filters.department;
+    }
+
     const headcount = await User.aggregate([
-      { $match: { role: 'employee' } },
+      { $match: baseMatch },
       {
         $group: {
           _id: '$department',
@@ -193,14 +280,26 @@ export const getHeadcountReport = async () => {
  * Get employee status report
  * Returns employee counts by status and detailed list
  */
-export const getEmployeeStatusReport = async () => {
+export const getEmployeeStatusReport = async (filters = {}) => {
   try {
-    const total = await User.countDocuments({ role: 'employee' });
-    const active = await User.countDocuments({ role: 'employee', isActive: true });
-    const inactive = await User.countDocuments({ role: 'employee', isActive: false });
-    const terminated = await User.countDocuments({ role: 'employee', terminatedAt: { $exists: true, $ne: null } });
+    const baseFilter = {
+      role: 'employee',
+      ...buildDateRangeFilter(filters),
+    };
 
-    const employees = await User.find({ role: 'employee' })
+    if (filters.department) {
+      baseFilter.department = filters.department;
+    }
+
+    const total = await User.countDocuments(baseFilter);
+    const active = await User.countDocuments({ ...baseFilter, isActive: true });
+    const inactive = await User.countDocuments({ ...baseFilter, isActive: false });
+    const terminated = await User.countDocuments({
+      ...baseFilter,
+      terminatedAt: { $exists: true, $ne: null },
+    });
+
+    const employees = await User.find(baseFilter)
       .select('personalInfo department positionTitle isActive dateOfEmployment')
       .lean();
 
@@ -231,19 +330,22 @@ export const getEmployeeStatusReport = async () => {
  * Get training report
  * Returns training record stats (courses, certifications, etc.)
  */
-export const getTrainingReport = async () => {
+export const getTrainingReport = async (filters = {}) => {
   try {
-    const totalRecords = await TrainingRecord.countDocuments().catch(() => 0);
-    const completed = await TrainingRecord.countDocuments({ status: 'completed' }).catch(() => 0);
-    const inProgress = await TrainingRecord.countDocuments({ status: 'in-progress' }).catch(() => 0);
-    const expired = await TrainingRecord.countDocuments({ status: 'expired' }).catch(() => 0);
+    const baseFilter = buildDateRangeFilter(filters);
+
+    const totalRecords = await TrainingRecord.countDocuments(baseFilter).catch(() => 0);
+    const completed = await TrainingRecord.countDocuments({ ...baseFilter, status: 'completed' }).catch(() => 0);
+    const inProgress = await TrainingRecord.countDocuments({ ...baseFilter, status: 'in-progress' }).catch(() => 0);
+    const expired = await TrainingRecord.countDocuments({ ...baseFilter, status: 'expired' }).catch(() => 0);
     const overdue = await TrainingRecord.countDocuments({
+      ...baseFilter,
       status: { $in: ['in-progress', 'expired'] },
       expiresAt: { $lt: new Date() },
     }).catch(() => 0);
 
     // Get training record details
-    const records = await TrainingRecord.find()
+    const records = await TrainingRecord.find(baseFilter)
       .populate('employeeId', 'personalInfo')
       .select('employeeId courseName provider status completedAt expiresAt')
       .lean()
@@ -271,6 +373,199 @@ export const getTrainingReport = async () => {
     };
   } catch (error) {
     logger.error(`Get training report error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getATSTrend = async (filters = {}) => {
+  try {
+    const window = getTrendWindow(filters);
+    if (!window) return [];
+
+    const { rangeStart, rangeEnd } = window;
+
+    const data = await Applicant.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: rangeStart, $lte: rangeEnd },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              {
+                $cond: [
+                  { $lt: ['$_id.month', 10] },
+                  { $concat: ['0', { $toString: '$_id.month' }] },
+                  { $toString: '$_id.month' },
+                ],
+              },
+            ],
+          },
+          count: 1,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+
+    const map = new Map(data.map((item) => [item.month, item.count]));
+    return buildMonthBuckets(rangeStart, rangeEnd).map((bucket) => ({
+      month: bucket.month,
+      count: map.get(bucket.key) || 0,
+    }));
+  } catch (error) {
+    logger.error(`Get ATS trend error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getHiringTrend = async (filters = {}) => {
+  try {
+    const window = getTrendWindow(filters);
+    if (!window) return [];
+
+    const { rangeStart, rangeEnd } = window;
+
+    const data = await Applicant.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: rangeStart, $lte: rangeEnd },
+          stage: { $in: ['hired', 'rejected'] },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+          },
+          hired: {
+            $sum: {
+              $cond: [{ $eq: ['$stage', 'hired'] }, 1, 0],
+            },
+          },
+          rejected: {
+            $sum: {
+              $cond: [{ $eq: ['$stage', 'rejected'] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              {
+                $cond: [
+                  { $lt: ['$_id.month', 10] },
+                  { $concat: ['0', { $toString: '$_id.month' }] },
+                  { $toString: '$_id.month' },
+                ],
+              },
+            ],
+          },
+          hired: 1,
+          rejected: 1,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+
+    const map = new Map(data.map((item) => [item.month, item]));
+    return buildMonthBuckets(rangeStart, rangeEnd).map((bucket) => {
+      const value = map.get(bucket.key);
+      return {
+        month: bucket.month,
+        hired: value?.hired || 0,
+        rejected: value?.rejected || 0,
+      };
+    });
+  } catch (error) {
+    logger.error(`Get hiring trend error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getTrainingCompletionTrend = async (filters = {}) => {
+  try {
+    const window = getTrendWindow(filters);
+    if (!window) return [];
+
+    const { rangeStart, rangeEnd } = window;
+
+    const data = await TrainingRecord.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          completedAt: { $ne: null, $gte: rangeStart, $lte: rangeEnd },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$completedAt' },
+            month: { $month: '$completedAt' },
+          },
+          completed: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              {
+                $cond: [
+                  { $lt: ['$_id.month', 10] },
+                  { $concat: ['0', { $toString: '$_id.month' }] },
+                  { $toString: '$_id.month' },
+                ],
+              },
+            ],
+          },
+          completed: 1,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+
+    const map = new Map(data.map((item) => [item.month, item.completed]));
+    return buildMonthBuckets(rangeStart, rangeEnd).map((bucket) => ({
+      month: bucket.month,
+      completed: map.get(bucket.key) || 0,
+    }));
+  } catch (error) {
+    logger.error(`Get training completion trend error: ${error.message}`);
     throw error;
   }
 };

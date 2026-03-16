@@ -5,6 +5,7 @@ import NotificationBell from '../../components/ui/NotificationBell';
 import {
   LayoutDashboard,
   FileText,
+  FileCheck,
   Bookmark,
   Briefcase,
   Calendar,
@@ -13,22 +14,38 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import { useState } from 'react';
-
-const navigationItems = [
-  { label: 'Dashboard', path: '/applicant/dashboard', icon: LayoutDashboard },
-  { label: 'My Applications', path: '/applicant/applications', icon: FileText },
-  { label: 'Interviews', path: '/applicant/interview', icon: Calendar },
-  { label: 'Saved Jobs', path: '/applicant/saved-jobs', icon: Bookmark },
-  { label: 'Browse Jobs', path: '/applicant/browse-jobs', icon: Briefcase },
-];
-
+import { useState, useEffect } from 'react';
+import api from '../../lib/api';
 
 export default function ApplicantLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showPreEmployment, setShowPreEmployment] = useState(false);
+
+  useEffect(() => {
+    api.get('/applications/my')
+      .then(res => {
+        const apps = res.data.data || res.data || [];
+        const qualified = apps.some(a =>
+          ['offer', 'hired'].includes(a.stage?.toLowerCase?.())
+        );
+        setShowPreEmployment(qualified);
+      })
+      .catch(() => setShowPreEmployment(false));
+  }, []);
+
+  const navigationItems = [
+    { label: 'Dashboard', path: '/applicant/dashboard', icon: LayoutDashboard },
+    { label: 'My Applications', path: '/applicant/applications', icon: FileText },
+    { label: 'Interviews', path: '/applicant/interview', icon: Calendar },
+    ...(showPreEmployment
+      ? [{ label: 'Pre-Employment', path: '/applicant/pre-employment', icon: FileCheck }]
+      : []),
+    { label: 'Saved Jobs', path: '/applicant/saved-jobs', icon: Bookmark },
+    { label: 'Browse Jobs', path: '/applicant/browse-jobs', icon: Briefcase },
+  ];
 
   // Role guard
   if (!user || user.role !== 'applicant') {

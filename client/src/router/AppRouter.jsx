@@ -31,6 +31,7 @@ import Announcements from '../pages/admin/AdminAnnouncements';
 import AdminList from '../pages/admin/AdminList';
 import ActivityLogs from '../pages/admin/AdminActivityLogs';
 import AdminRequests from '../pages/admin/AdminRequests';
+import AdminPreEmployment from '../pages/admin/AdminPreEmployment';
 
 // Pages - Employee
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
@@ -46,6 +47,7 @@ import ApplicantDashboard from '../pages/applicant/ApplicantDashboard';
 import MyApplications from '../pages/applicant/MyApplications';
 import SavedJobs from '../pages/applicant/ApplicantSavedJobs';
 import ApplicantInterviews from '../pages/applicant/ApplicantInterviews';
+import ApplicantPreEmployment from '../pages/applicant/ApplicantPreEmployment';
 import PendingApproval from '../pages/auth/PendingApproval';
 
 // Protect routes by auth + role.
@@ -139,6 +141,7 @@ export default function AppRouter() {
           <Route path="applications" element={<MyApplications />} />
           <Route path="saved-jobs" element={<SavedJobs />} />
           <Route path="interview" element={<ApplicantInterviews />} />
+          <Route path="pre-employment" element={<ApplicantPreEmployment />} />
           <Route path="browse-jobs" element={<JobBoard />} />
         </Route>
 
@@ -163,6 +166,7 @@ export default function AppRouter() {
           <Route path="announcements" element={<Announcements />} />
           <Route path="admins" element={<AdminList />} />
           <Route path="requests" element={<AdminRequests />} />
+          <Route path="pre-employment" element={<AdminPreEmployment />} />
           <Route path="logs" element={<ActivityLogs />} />
         </Route>
 

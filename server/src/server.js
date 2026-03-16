@@ -22,6 +22,7 @@ import uploadRouter from './modules/upload/upload.routes.js';
 import announcementsRouter from './modules/announcements/announcements.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
+import preEmploymentRoutes from './modules/preEmployment/preEmployment.routes.js';
 import { startTrainingExpiryJob } from './jobs/trainingExpiryJob.js';
 
 dotenv.config();
@@ -91,6 +92,7 @@ app.use('/api/admins', adminsRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/requests', requestRoutes);
+app.use('/api/pre-employment', preEmploymentRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -6,6 +6,9 @@ import {
   getHeadcountReport,
   getEmployeeStatusReport,
   getTrainingReport,
+  getATSTrend,
+  getHiringTrend,
+  getTrainingCompletionTrend,
 } from './reports.service.js';
 import {
   createOshaReport,
@@ -41,7 +44,8 @@ router.get(
   requireRole(['admin', 'super-admin', 'hr']),
   async (req, res, next) => {
     try {
-      const data = await getATSReport();
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getATSReport({ dateFrom, dateTo, department });
       res.status(200).json({
         success: true,
         data,
@@ -59,7 +63,8 @@ router.get(
   requireRole(['admin', 'super-admin', 'hr']),
   async (req, res, next) => {
     try {
-      const data = await getHeadcountReport();
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getHeadcountReport({ dateFrom, dateTo, department });
       res.status(200).json({
         success: true,
         data,
@@ -77,7 +82,8 @@ router.get(
   requireRole(['admin', 'super-admin', 'hr']),
   async (req, res, next) => {
     try {
-      const data = await getEmployeeStatusReport();
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getEmployeeStatusReport({ dateFrom, dateTo, department });
       res.status(200).json({
         success: true,
         data,
@@ -95,7 +101,62 @@ router.get(
   requireRole(['admin', 'super-admin', 'hr']),
   async (req, res, next) => {
     try {
-      const data = await getTrainingReport();
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getTrainingReport({ dateFrom, dateTo, department });
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  '/trends/ats',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  async (req, res, next) => {
+    try {
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getATSTrend({ dateFrom, dateTo, department });
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  '/trends/hiring',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  async (req, res, next) => {
+    try {
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getHiringTrend({ dateFrom, dateTo, department });
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  '/trends/training',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  async (req, res, next) => {
+    try {
+      const { dateFrom, dateTo, department } = req.query;
+      const data = await getTrainingCompletionTrend({ dateFrom, dateTo, department });
       res.status(200).json({
         success: true,
         data,

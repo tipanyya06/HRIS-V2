@@ -14,6 +14,7 @@ import {
   Activity,
   Bell,
   BarChart3,
+  FileCheck,
   LogOut,
   Menu,
   X,
@@ -39,6 +40,7 @@ export default function AdminLayout() {
   const recruitmentItems = [
     { path: '/admin/jobs', label: 'Jobs', icon: Briefcase },
     { path: '/admin/applicants', label: 'Applicants', icon: Users },
+    { path: '/admin/pre-employment', label: 'Pre-Employment', icon: FileCheck },
     { path: '/admin/ats', label: 'ATS Pipeline', icon: GitBranch },
     { path: '/admin/interviews', label: 'Interviews', icon: Calendar },
   ];

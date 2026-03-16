@@ -92,7 +92,8 @@ export const createIncidentReport = async (req, res, next) => {
  */
 export const exportCSV = async (req, res, next) => {
   try {
-    const { type } = req.query;
+    const { type, dateFrom, dateTo, department } = req.query;
+    const filters = { dateFrom, dateTo, department };
 
     if (!type || !['ats', 'headcount', 'employees', 'training'].includes(type)) {
       return res.status(400).json({
@@ -107,7 +108,7 @@ export const exportCSV = async (req, res, next) => {
     switch (type) {
       case 'ats': {
         const { getATSReport } = await import('./reports.service.js');
-        const atsData = await getATSReport();
+        const atsData = await getATSReport(filters);
         filename = `ats-report-${new Date().toISOString().split('T')[0]}.csv`;
         const stages = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
         csvContent = 'Stage,Count\n' + 
@@ -116,7 +117,7 @@ export const exportCSV = async (req, res, next) => {
       }
       case 'headcount': {
         const { getHeadcountReport } = await import('./reports.service.js');
-        const hcData = await getHeadcountReport();
+        const hcData = await getHeadcountReport(filters);
         filename = `headcount-report-${new Date().toISOString().split('T')[0]}.csv`;
         csvContent = 'Department,Total,Active,Inactive\n' +
           (hcData.departments || [])
@@ -126,7 +127,7 @@ export const exportCSV = async (req, res, next) => {
       }
       case 'employees': {
         const { getEmployeeStatusReport } = await import('./reports.service.js');
-        const empData = await getEmployeeStatusReport();
+        const empData = await getEmployeeStatusReport(filters);
         filename = `employee-status-report-${new Date().toISOString().split('T')[0]}.csv`;
         csvContent = 'Name,Department,Position,Status,Start Date\n' +
           (empData.employees || [])
@@ -136,7 +137,7 @@ export const exportCSV = async (req, res, next) => {
       }
       case 'training': {
         const { getTrainingReport } = await import('./reports.service.js');
-        const trData = await getTrainingReport();
+        const trData = await getTrainingReport(filters);
         filename = `training-report-${new Date().toISOString().split('T')[0]}.csv`;
         csvContent = 'Employee,Course,Status,Completed,Expires\n' +
           (trData.assignments || [])
@@ -155,7 +156,10 @@ export const exportCSV = async (req, res, next) => {
     logger.info(`CSV export: ${type} by user ${req.user.id}`);
   } catch (error) {
     logger.error(`CSV export error: ${error.message}`);
-    next(error);
+    return res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to export CSV report',
+    });
   }
 };
 
@@ -165,7 +169,8 @@ export const exportCSV = async (req, res, next) => {
  */
 export const exportPDF = async (req, res, next) => {
   try {
-    const { type } = req.query;
+    const { type, dateFrom, dateTo, department } = req.query;
+    const filters = { dateFrom, dateTo, department };
 
     if (!type || !['ats', 'headcount', 'employees', 'training'].includes(type)) {
       return res.status(400).json({
@@ -195,7 +200,7 @@ export const exportPDF = async (req, res, next) => {
     switch (type) {
       case 'ats': {
         const { getATSReport } = await import('./reports.service.js');
-        const reportData = await getATSReport();
+        const reportData = await getATSReport(filters);
         doc.fontSize(12).text('ATS Funnel by Stage:', { underline: true });
         doc.moveDown(0.5);
         doc.fontSize(10);
@@ -209,7 +214,7 @@ export const exportPDF = async (req, res, next) => {
       }
       case 'headcount': {
         const { getHeadcountReport } = await import('./reports.service.js');
-        const reportData = await getHeadcountReport();
+        const reportData = await getHeadcountReport(filters);
         doc.fontSize(12).text('Headcount by Department:', { underline: true });
         doc.moveDown(0.5);
         doc.fontSize(9);
@@ -220,7 +225,7 @@ export const exportPDF = async (req, res, next) => {
       }
       case 'employees': {
         const { getEmployeeStatusReport } = await import('./reports.service.js');
-        const reportData = await getEmployeeStatusReport();
+        const reportData = await getEmployeeStatusReport(filters);
         doc.fontSize(12).text('Employee Status Summary:', { underline: true });
         doc.moveDown(0.5);
         doc.fontSize(10);
@@ -239,7 +244,7 @@ export const exportPDF = async (req, res, next) => {
       }
       case 'training': {
         const { getTrainingReport } = await import('./reports.service.js');
-        const reportData = await getTrainingReport();
+        const reportData = await getTrainingReport(filters);
         doc.fontSize(12).text('Training Summary:', { underline: true });
         doc.moveDown(0.5);
         doc.fontSize(10);
@@ -265,6 +270,9 @@ export const exportPDF = async (req, res, next) => {
     logger.info(`PDF export: ${type} by user ${req.user.id}`);
   } catch (error) {
     logger.error(`PDF export error: ${error.message}`);
-    next(error);
+    return res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to export PDF report',
+    });
   }
 };
