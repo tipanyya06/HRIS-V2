@@ -29,6 +29,7 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [profileTab, setProfileTab] = useState('personal');
 
   // Edit Status Modal
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -88,6 +89,7 @@ export default function Employees() {
   const openDetail = async (employee) => {
     try {
       setIsDetailLoading(true);
+      setProfileTab('personal');
       setIsDetailOpen(true);
       const res = await api.get(`/employees/${employee._id}`);
       setSelectedEmployee(res.data?.data || res.data || null);
@@ -357,157 +359,241 @@ export default function Employees() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         title="Employee Profile"
-        size="lg"
+        size="3xl"
       >
         {isDetailLoading ? (
-          <div className="flex justify-center py-8">
-            <LoadingSpinner />
-          </div>
+          <div className="flex justify-center py-8"><LoadingSpinner /></div>
         ) : selectedEmployee ? (
-          <div className="space-y-5">
-            <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
-              <div className="w-14 h-14 rounded-full bg-[#223B5B] flex items-center justify-center text-white text-xl font-bold">
-                {(selectedEmployee.personalInfo?.givenName || 'E').charAt(0).toUpperCase()}
+          <div className="flex -mx-6 -mb-6 -mt-4" style={{ minHeight: '560px' }}>
+
+            {/* LEFT SIDEBAR */}
+            <div className="w-60 flex-shrink-0 bg-[#1e3a5f] flex flex-col items-center py-8 px-5 rounded-bl-lg">
+
+              {/* Avatar */}
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 mb-4">
+                {selectedEmployee.profilePicUrl ? (
+                  <img src={selectedEmployee.profilePicUrl} alt={getEmployeeName(selectedEmployee)} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-[#2596BE] flex items-center justify-center text-white text-3xl font-bold">
+                    {(selectedEmployee.personalInfo?.givenName || 'E').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-lg font-semibold text-gray-900">{getEmployeeName(selectedEmployee)}</p>
-                <p className="text-sm text-gray-500">{selectedEmployee.email}</p>
-                <div className="mt-1">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      getStatusBadge(selectedEmployee).class
+
+              {/* Name + email + status */}
+              <p className="text-white font-semibold text-sm text-center leading-snug">{getEmployeeName(selectedEmployee)}</p>
+              <p className="text-white/50 text-xs text-center mt-1 mb-2">{selectedEmployee.email}</p>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mb-5 ${getStatusBadge(selectedEmployee).class}`}>
+                {getStatusBadge(selectedEmployee).label}
+              </span>
+
+              {/* Divider */}
+              <div className="w-full border-t border-white/10 mb-5" />
+
+              {/* Info fields */}
+              <div className="w-full space-y-4 text-left">
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Department</p>
+                  <p className="text-white text-sm font-medium">{selectedEmployee.department || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Position</p>
+                  <p className="text-white text-sm font-medium">{selectedEmployee.positionTitle || selectedEmployee.position || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Classification</p>
+                  <p className="text-white text-sm font-medium">{selectedEmployee.classification || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Role</p>
+                  <p className="text-white text-sm font-medium capitalize">{selectedEmployee.role || '-'}</p>
+                </div>
+              </div>
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Action buttons */}
+              <div className="w-full space-y-2 pt-4">
+                <button
+                  onClick={() => { setIsDetailOpen(false); openStatusModal(selectedEmployee); }}
+                  className="w-full px-3 py-2 text-xs font-semibold bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  {selectedEmployee.isActive ? 'Deactivate' : 'Activate'}
+                </button>
+                {selectedEmployee.isActive ? (
+                  <button
+                    onClick={() => { setIsDetailOpen(false); openTerminateModal(selectedEmployee); }}
+                    className="w-full px-3 py-2 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Terminate
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => setIsDetailOpen(false)}
+                  className="w-full px-3 py-2 text-xs font-semibold bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT PANEL */}
+            <div className="flex-1 flex flex-col overflow-hidden border-l border-gray-100">
+
+              {/* Tab bar */}
+              <div className="flex border-b border-gray-200 px-6 bg-white flex-shrink-0 overflow-x-auto">
+                {[
+                  { key: 'personal', label: 'Personal Info' },
+                  { key: 'contact', label: 'Contact & Emergency' },
+                  { key: 'employment', label: 'Employment Info' },
+                  { key: 'government', label: 'Government IDs' },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setProfileTab(tab.key)}
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap mr-1 ${
+                      profileTab === tab.key
+                        ? 'border-[#1e3a5f] text-[#1e3a5f]'
+                        : 'border-transparent text-gray-400 hover:text-gray-700'
                     }`}
                   >
-                    {getStatusBadge(selectedEmployee).label}
-                  </span>
-                </div>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto px-8 py-6 bg-gray-50">
+
+                {/* Personal Info */}
+                {profileTab === 'personal' && (
+                  <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                    {[
+                      { label: 'Given Name', value: selectedEmployee.personalInfo?.givenName },
+                      { label: 'Last Name', value: selectedEmployee.personalInfo?.lastName || selectedEmployee.personalInfo?.surname },
+                      { label: 'Middle Name', value: selectedEmployee.personalInfo?.middleName },
+                      { label: 'Date of Birth', value: selectedEmployee.personalInfo?.dateOfBirth },
+                      { label: 'Gender', value: selectedEmployee.personalInfo?.gender },
+                      { label: 'Civil Status', value: selectedEmployee.personalInfo?.civilStatus },
+                      { label: 'Religion', value: selectedEmployee.personalInfo?.religion },
+                      { label: 'Blood Type', value: selectedEmployee.bloodType || selectedEmployee.personalInfo?.bloodType },
+                      { label: 'Willing to Donate', value: selectedEmployee.bloodDonorConsent ? 'Yes' : 'No' },
+                      { label: 'Nationality', value: selectedEmployee.personalInfo?.nationality },
+                    ].map(field => (
+                      <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{field.label}</p>
+                        <p className="text-gray-800 font-semibold text-sm">{field.value || '-'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Contact & Emergency */}
+                {profileTab === 'contact' && (
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Contact Details</p>
+                      <div className="grid grid-cols-2 gap-x-10 gap-y-4">
+                        {[
+                          { label: 'Personal Email', value: selectedEmployee.personalInfo?.email || selectedEmployee.contactInfo?.personalEmail },
+                          { label: 'Company Email', value: selectedEmployee.email },
+                          { label: 'Main Contact No', value: selectedEmployee.contactInfo?.mainContactNo },
+                          { label: 'Alternative Contact No', value: selectedEmployee.contactInfo?.alternativeContactNo },
+                          { label: 'Address Line', value: selectedEmployee.contactInfo?.address?.addressLine },
+                          { label: 'City', value: selectedEmployee.contactInfo?.address?.city },
+                          { label: 'Province', value: selectedEmployee.contactInfo?.address?.province },
+                          { label: 'Zip Code', value: selectedEmployee.contactInfo?.address?.zipCode },
+                          { label: 'Country', value: selectedEmployee.contactInfo?.address?.country },
+                        ].map(field => (
+                          <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{field.label}</p>
+                            <p className="text-gray-800 font-semibold text-sm">{field.value || '-'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Emergency Contact</p>
+                      <div className="grid grid-cols-2 gap-x-10 gap-y-4">
+                        {[
+                          { label: 'Name', value: selectedEmployee.emergencyContact?.name },
+                          { label: 'Relationship', value: selectedEmployee.emergencyContact?.relationship },
+                          { label: 'Contact Number', value: selectedEmployee.emergencyContact?.contact || selectedEmployee.emergencyContact?.phone },
+                          { label: 'Address', value: typeof selectedEmployee.emergencyContact?.address === 'object'
+                            ? [selectedEmployee.emergencyContact?.address?.addressLine, selectedEmployee.emergencyContact?.address?.city, selectedEmployee.emergencyContact?.address?.country].filter(Boolean).join(', ')
+                            : selectedEmployee.emergencyContact?.address },
+                        ].map(field => (
+                          <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{field.label}</p>
+                            <p className="text-gray-800 font-semibold text-sm">{field.value || '-'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Employment Info */}
+                {profileTab === 'employment' && (
+                  <div className="grid grid-cols-2 gap-x-10 gap-y-4">
+                    {[
+                      { label: 'Department', value: selectedEmployee.department },
+                      { label: 'Position', value: selectedEmployee.positionTitle || selectedEmployee.position },
+                      { label: 'Classification', value: selectedEmployee.classification },
+                      { label: 'Role', value: selectedEmployee.role },
+                      { label: 'Hire Date', value: selectedEmployee.dateOfEmployment || selectedEmployee.hireDate
+                        ? new Date(selectedEmployee.dateOfEmployment || selectedEmployee.hireDate).toLocaleDateString()
+                        : '-' },
+                      { label: 'Years of Service', value: (() => {
+                        const start = new Date(selectedEmployee.dateOfEmployment || selectedEmployee.hireDate || selectedEmployee.createdAt);
+                        const now = new Date();
+                        const years = Math.floor((now - start) / (365.25 * 24 * 60 * 60 * 1000));
+                        const months = Math.floor(((now - start) % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
+                        return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
+                      })() },
+                      { label: 'HMO Provider', value: selectedEmployee.hmoInfo?.provider },
+                      { label: 'Allowance Type', value: selectedEmployee.payrollInfo?.allowanceType },
+                      { label: 'Allowance Amount', value: selectedEmployee.payrollInfo?.allowanceAmount
+                        ? `₱${Number(selectedEmployee.payrollInfo.allowanceAmount).toLocaleString()}`
+                        : '-' },
+                    ].map(field => (
+                      <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{field.label}</p>
+                        <p className="text-gray-800 font-semibold text-sm">{field.value || '-'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Government IDs */}
+                {profileTab === 'government' && (
+                  selectedEmployee.governmentIds ? (
+                    <div>
+                      <div className="grid grid-cols-2 gap-x-10 gap-y-4">
+                        {[
+                          { label: 'SSN', value: selectedEmployee.governmentIds?.ssn },
+                          { label: 'TIN', value: selectedEmployee.governmentIds?.tin },
+                          { label: 'SSS', value: selectedEmployee.governmentIds?.sss },
+                          { label: 'Pag-IBIG', value: selectedEmployee.governmentIds?.pagIbig },
+                          { label: 'PhilHealth', value: selectedEmployee.governmentIds?.philhealth },
+                        ].map(field => (
+                          <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">{field.label}</p>
+                            <p className="text-gray-800 font-semibold text-sm">{field.value || '-'}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-6">🔒 Encrypted — decrypted for admin view only</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">No government ID information available.</p>
+                  )
+                )}
+
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Department</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.department || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Role</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.role || '-'}</p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Position</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.positionTitle || selectedEmployee.position || '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Email (secondary)</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.personalInfo?.email || selectedEmployee.contactInfo?.personalEmail || '-'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Employment Type</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.classification || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Address</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.contactInfo?.address?.addressLine || '-'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Phone</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.personalInfo?.phone || selectedEmployee.contactInfo?.mainContactNo || '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Emergency Contact</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.emergencyContact?.name || '-'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Date of Birth</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.personalInfo?.dateOfBirth || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Emergency Phone</p>
-                <p className="text-gray-800 font-medium">
-                  {selectedEmployee.emergencyContact?.phone || selectedEmployee.emergencyContact?.contact || '-'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Civil Status</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.personalInfo?.civilStatus || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">HMO Provider</p>
-                <p className="text-gray-800 font-medium">{selectedEmployee.hmoInfo?.provider || '-'}</p>
-              </div>
-            </div>
-
-            {selectedEmployee.governmentIds ? (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                  Government IDs
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-400">SSN</p>
-                    <p className="text-gray-800">{selectedEmployee.governmentIds?.ssn || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">TIN</p>
-                    <p className="text-gray-800">{selectedEmployee.governmentIds?.tin || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">SSS</p>
-                    <p className="text-gray-800">{selectedEmployee.governmentIds?.sss || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Pag-IBIG</p>
-                    <p className="text-gray-800">{selectedEmployee.governmentIds?.pagIbig || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">PhilHealth</p>
-                    <p className="text-gray-800">{selectedEmployee.governmentIds?.philhealth || '-'}</p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-3">Encrypted - decrypted for admin view only</p>
-              </div>
-            ) : null}
-
-            <div className="flex gap-2 justify-end mt-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setIsDetailOpen(false);
-                  openStatusModal(selectedEmployee);
-                }}
-              >
-                {selectedEmployee.isActive ? 'Deactivate' : 'Activate'}
-              </Button>
-              {selectedEmployee.isActive ? (
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    setIsDetailOpen(false);
-                    openTerminateModal(selectedEmployee);
-                  }}
-                >
-                  Terminate
-                </Button>
-              ) : null}
-              <Button variant="secondary" onClick={() => setIsDetailOpen(false)}>
-                Close
-              </Button>
-            </div>
           </div>
         ) : null}
       </Modal>

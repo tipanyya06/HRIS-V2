@@ -31,6 +31,7 @@ const STAGE_OPTIONS = STAGES.map((stage) => ({
 const VIEW_OPTIONS = [
   { value: 'pipeline', label: 'Pipeline' },
   { value: 'table', label: 'Candidates' },
+  { value: 'list', label: 'List' },
   { value: 'insights', label: 'Insights' },
 ];
 
@@ -86,6 +87,8 @@ export default function ATS() {
   const [newStage, setNewStage] = useState('');
   const [stageNote, setStageNote] = useState('');
   const [newNoteText, setNewNoteText] = useState('');
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -310,7 +313,7 @@ export default function ATS() {
           subtitle="Manage applicants, track pipeline health, and drive hiring decisions"
         />
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5 overflow-hidden">
           {[
             { label: 'Total', value: dashboardStats.total },
             { label: 'Shortlisted', value: dashboardStats.shortlisted },
@@ -318,14 +321,14 @@ export default function ATS() {
             { label: 'Rejected', value: dashboardStats.rejected },
             { label: 'Conversion', value: `${dashboardStats.conversionRate}%` },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white border border-slate-200 rounded-lg p-4">
+            <div key={stat.label} className="bg-white border border-slate-200 rounded-xl p-4">
               <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+              <p className="text-[#223B5B] font-bold text-3xl">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5 shadow-sm">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[140px]">
               <p className="text-xs font-medium text-slate-500 mb-1">Job</p>
@@ -365,8 +368,8 @@ export default function ATS() {
                   className={[
                     'px-3 py-2 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap',
                     viewMode === opt.value
-                      ? 'bg-slate-900 border-slate-900 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800',
+                      ? 'bg-[#223B5B] border-[#223B5B] text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-[#223B5B] hover:text-[#223B5B]',
                   ].join(' ')}
                 >
                   {opt.label}
@@ -392,7 +395,7 @@ export default function ATS() {
             {STAGES.map((stage) => {
               const stageItems = getApplicationsByStage(stage);
               return (
-                <Card key={stage} className={`${STAGE_COLORS[stage]} border p-3 w-52 flex-shrink-0`}>
+                <Card key={stage} className={`${STAGE_COLORS[stage]} border p-4 w-64 flex-shrink-0 rounded-xl`}>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-bold text-slate-900 capitalize">{stage}</h2>
                     <Badge
@@ -415,14 +418,14 @@ export default function ATS() {
                             key={app._id}
                             onClick={() => setSelectedApp(app)}
                             className={[
-                              'bg-white p-3 rounded-lg border cursor-pointer transition-all',
+                              'bg-white p-4 rounded-xl border cursor-pointer transition-all hover:shadow-sm',
                               selectedApp?._id === app._id
                                 ? 'border-slate-900 shadow-md'
-                                : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
+                                : 'border-slate-200 hover:border-slate-300',
                             ].join(' ')}
                           >
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#223B5B] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                                 {initials}
                               </div>
                               <div className="min-w-0">
@@ -430,7 +433,7 @@ export default function ATS() {
                                 <p className="text-[10px] text-slate-400 truncate">{email}</p>
                               </div>
                             </div>
-                            <p className="text-[10px] text-slate-500 truncate mb-1">{getJobTitle(app.jobId)}</p>
+                            <p className="inline-flex max-w-full items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-[#223B5B] truncate mb-2 border border-slate-200">{getJobTitle(app.jobId)}</p>
                             <p className="text-[10px] text-slate-400">
                               {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}
                             </p>
@@ -453,12 +456,172 @@ export default function ATS() {
               emptyMessage="No applications found for current filters"
             />
           </Card>
+        ) : viewMode === 'list' ? (
+          <div className="flex gap-4 items-start">
+
+            <div className={`flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden transition-all ${sidebarOpen ? 'max-w-[calc(100%-320px)]' : 'w-full'}`}>
+              <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <div className="col-span-3">Candidate</div>
+                <div className="col-span-3">Job</div>
+                <div className="col-span-2">Stage</div>
+                <div className="col-span-2">Applied</div>
+                <div className="col-span-2">Resume</div>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {displayedApplications.length === 0 ? (
+                  <div className="py-16 text-center text-slate-400 text-sm">No applications found</div>
+                ) : displayedApplications.map((app) => {
+                  const isExpanded = expandedRowId === app._id;
+                  const isSelected = selectedApp?._id === app._id;
+                  const initials = (app.fullName || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+                  return (
+                    <div key={app._id} className={`transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                      <div
+                        className="grid grid-cols-12 gap-4 px-5 py-4 cursor-pointer items-center"
+                        onClick={() => {
+                          setExpandedRowId(isExpanded ? null : app._id);
+                          setSelectedApp(app);
+                          setSidebarOpen(true);
+                          setNewStage('');
+                          setStageNote('');
+                          setNewNoteText('');
+                        }}
+                      >
+                        <div className="col-span-3 flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{app.fullName || 'Unknown'}</p>
+                            <p className="text-xs text-slate-400 truncate">{app.email}</p>
+                          </div>
+                        </div>
+                        <div className="col-span-3">
+                          <p className="text-sm text-slate-700 truncate">{getJobTitle(app.jobId)}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <Badge status={getStageBadgeStatus(app.stage)} label={app.stage ? app.stage.charAt(0).toUpperCase() + app.stage.slice(1) : 'Applied'} />
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm text-slate-500">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          {app.resumeUrl ? (
+                            <a href={app.resumeUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-blue-600 hover:underline">View</a>
+                          ) : (
+                            <span className="text-xs text-slate-400">None</span>
+                          )}
+                          <span className="ml-auto text-slate-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+
+                      {isExpanded ? (
+                        <div className="px-5 pb-5 pt-1 bg-slate-50 border-t border-slate-100">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                              { label: 'Phone', value: app.phone || 'N/A' },
+                              { label: 'Applied Date', value: app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A' },
+                              { label: 'Current Stage', value: app.stage ? app.stage.charAt(0).toUpperCase() + app.stage.slice(1) : 'Applied' },
+                              { label: 'Cover Letter', value: app.coverLetter ? 'Provided' : 'Not provided' },
+                            ].map((field) => (
+                              <div key={field.label} className="bg-white rounded-lg px-4 py-3 border border-slate-100">
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
+                                <p className="text-sm font-semibold text-slate-800">{field.value}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {app.notes && app.notes.length > 0 ? (
+                            <div className="mt-3 bg-white rounded-lg px-4 py-3 border border-slate-100">
+                              <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-2">Latest Note</p>
+                              <p className="text-sm text-slate-700">{app.notes[app.notes.length - 1]?.text || '-'}</p>
+                              <p className="text-xs text-slate-400 mt-1">{app.notes[app.notes.length - 1]?.createdBy || 'Unknown'}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {sidebarOpen && selectedApp ? (
+              <div className="w-72 flex-shrink-0 bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-[#223B5B] text-white">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{selectedApp.fullName || 'Unknown'}</p>
+                    <p className="text-xs text-white/60 truncate">{selectedApp.email}</p>
+                  </div>
+                  <button onClick={() => { setSidebarOpen(false); setSelectedApp(null); setExpandedRowId(null); }} className="text-white/60 hover:text-white ml-2 flex-shrink-0">✕</button>
+                </div>
+
+                <div className="p-4 space-y-4 overflow-y-auto max-h-[600px]">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-2">Current Stage</p>
+                    <Badge status={getStageBadgeStatus(selectedApp.stage)} label={selectedApp.stage ? selectedApp.stage.charAt(0).toUpperCase() + selectedApp.stage.slice(1) : 'Applied'} />
+                  </div>
+
+                  <div className="border-t border-slate-100" />
+
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-2">Update Stage</p>
+                    <Select label="" name="stage" value={newStage} onChange={(e) => setNewStage(e.target.value)} options={[{ value: '', label: 'Select stage...' }, ...STAGE_OPTIONS]} />
+                    <textarea
+                      value={stageNote}
+                      onChange={(e) => setStageNote(e.target.value)}
+                      placeholder="Optional note..."
+                      rows={2}
+                      className="mt-2 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    />
+                    <Button onClick={handleStageUpdate} isDisabled={!newStage} isLoading={isUpdatingStage} className="mt-2 w-full">
+                      Update Stage
+                    </Button>
+                  </div>
+
+                  <div className="border-t border-slate-100" />
+
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-2">Add Note</p>
+                    <textarea
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      placeholder="Recruiter note..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    />
+                    <Button onClick={handleAddNote} variant="secondary" isDisabled={!newNoteText.trim()} isLoading={isAddingNote} className="mt-2 w-full">
+                      Save Note
+                    </Button>
+                  </div>
+
+                  {Array.isArray(selectedApp.notes) && selectedApp.notes.length > 0 ? (
+                    <>
+                      <div className="border-t border-slate-100" />
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-2">History</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {selectedApp.notes.map((note, idx) => (
+                            <div key={idx} className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                              <p className="text-xs text-slate-700">{note.text || ''}</p>
+                              <p className="text-[10px] text-slate-400 mt-1">{note.createdBy || 'Unknown'} · {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {STAGES.map((stage) => (
               <Card key={stage} className="border border-slate-200 shadow-sm">
                 <p className="text-[11px] uppercase tracking-wide text-slate-500">{stage}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">{stageCounts[stage] || 0}</p>
+                <p className="text-3xl font-bold text-[#223B5B] mt-1">{stageCounts[stage] || 0}</p>
                 <div className="mt-3">
                   <Badge
                     status={getStageBadgeStatus(stage)}
@@ -470,7 +633,7 @@ export default function ATS() {
           </div>
         )}
 
-        {selectedApp ? (
+        {selectedApp && viewMode !== 'list' ? (
           <Modal
             isOpen={true}
             onClose={() => setSelectedApp(null)}

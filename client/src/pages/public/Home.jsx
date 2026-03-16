@@ -154,7 +154,7 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-6 h-px bg-[#2596BE] inline-block" />
-                <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#2596BE]">
+                <span className="text-xs font-semibold text-[#2596BE]">
                   Open Positions
                 </span>
               </div>
@@ -167,7 +167,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveFilter('All')}
-                className={`px-4 py-1.5 text-xs font-medium tracking-wide border rounded-sm transition-all ${
+                className={`px-4 py-1.5 text-xs font-medium tracking-wide border rounded-lg transition-all ${
                   activeFilter === 'All'
                     ? 'border-[#223B5B] text-[#223B5B] bg-gray-50'
                     : 'border-gray-200 text-gray-500 bg-white hover:border-[#223B5B] hover:text-[#223B5B]'
@@ -180,7 +180,7 @@ export default function Home() {
                   key={department}
                   type="button"
                   onClick={() => setActiveFilter(department)}
-                  className={`px-4 py-1.5 text-xs font-medium tracking-wide border rounded-sm transition-all ${
+                  className={`px-4 py-1.5 text-xs font-medium tracking-wide border rounded-lg transition-all ${
                     activeFilter === department
                       ? 'border-[#223B5B] text-[#223B5B] bg-gray-50'
                       : 'border-gray-200 text-gray-500 bg-white hover:border-[#223B5B] hover:text-[#223B5B]'
@@ -208,23 +208,23 @@ export default function Home() {
                 <div
                   key={job._id}
                   onClick={() => navigate('/careers')}
-                  className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-sm cursor-pointer transition-all duration-200 hover:border-[#223B5B] hover:shadow-md hover:translate-x-0.5"
+                  className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-lg cursor-pointer transition-all duration-200 hover:border-[#223B5B] hover:shadow-md hover:translate-x-0.5"
                 >
                   <span className="w-2 h-2 rounded-full bg-[#2596BE] flex-shrink-0" />
 
-                  <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#2596BE] bg-[#2596BE]/[0.07] px-3 py-1 rounded-sm flex-shrink-0 min-w-[130px] text-center">
+                  <span className="text-xs font-medium text-[#2596BE] bg-[#2596BE]/[0.07] px-3 py-1 rounded-sm flex-shrink-0 min-w-[130px] text-center">
                     {job.department || 'General'}
                   </span>
 
-                  <h3 className="flex-1 text-lg font-semibold text-[#223B5B]">
+                  <h3 className="flex-1 text-lg font-bold text-gray-900">
                     {job.title}
                   </h3>
 
                   <div className="hidden sm:flex items-center gap-5 ml-auto">
-                    <span className="text-xs text-gray-400 font-light whitespace-nowrap">
+                    <span className="text-xs text-gray-600 whitespace-nowrap">
                       Location: {job.country || 'PH'}
                     </span>
-                    <span className="text-xs text-gray-400 font-light whitespace-nowrap">
+                    <span className="text-xs text-gray-600 whitespace-nowrap">
                       Full-time
                     </span>
                   </div>
@@ -240,7 +240,7 @@ export default function Home() {
           <div className="flex justify-center mt-10">
             <button
               onClick={() => navigate('/careers')}
-              className="px-8 py-3 border-[1.5px] border-[#223B5B] text-[#223B5B] text-xs font-semibold tracking-[0.08em] uppercase rounded-sm hover:bg-[#223B5B] hover:text-white transition-all duration-200"
+              className="px-8 py-3 border-[1.5px] border-[#223B5B] text-[#223B5B] text-xs font-semibold tracking-[0.08em] uppercase rounded-lg hover:bg-[#223B5B] hover:text-white transition-all duration-200"
             >
               Explore All Positions
             </button>

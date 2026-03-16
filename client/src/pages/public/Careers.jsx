@@ -77,6 +77,31 @@ export default function Careers() {
     return matchSearch && matchDept;
   });
 
+  const handleApplyClick = (job) => {
+    if (!job) return;
+
+    const blockedAdminRoles = ['admin', 'super-admin', 'hr'];
+
+    if (user && blockedAdminRoles.includes(user.role)) {
+      return;
+    }
+
+    if (user?.role === 'employee') {
+      setEmployeeBlockMessage('You are already an employee. Contact HR for internal transfers.');
+      return;
+    }
+
+    if (!user) {
+      setPendingJob(job);
+      setSelectedJob(job);
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setSelectedJob(job);
+    setApplyModalOpen(true);
+  };
+
   const handleAuthSuccess = () => {
     setAuthModalOpen(false);
     if (pendingJob) {
@@ -110,12 +135,12 @@ export default function Careers() {
           </div>
 
           {/* Headline */}
-          <h1 className="font-serif text-5xl md:text-6xl font-semibold text-white tracking-tight leading-tight mb-4">
+          <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight leading-tight mb-4">
             Join Our Team
           </h1>
 
           {/* Subheadline */}
-          <p className="text-base font-light tracking-[0.06em] uppercase text-white/45">
+          <p className="text-base text-white/60">
             Building the world's best headwear — together
           </p>
         </div>
@@ -176,7 +201,7 @@ export default function Careers() {
           ) : filteredJobs.length === 0 ? (
             <div className="py-24 text-center">
               <div className="text-4xl mb-4">🔍</div>
-              <p className="font-serif text-2xl text-[#223B5B] mb-2">No positions found</p>
+              <p className="text-2xl font-bold text-gray-900 mb-2">No positions found</p>
               <p className="text-sm text-gray-400 font-light">
                 Try a different search or department filter
               </p>
@@ -188,82 +213,110 @@ export default function Careers() {
                 {filteredJobs.length} Position{filteredJobs.length !== 1 ? 's' : ''} Available
               </div>
 
-              {/* Job Rows */}
-              <div className="flex flex-col gap-3">
-                {filteredJobs.map((job) => (
-                  <div
-                    key={job._id}
-                    className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-sm cursor-default transition-all duration-200 hover:border-[#223B5B] hover:shadow-lg"
-                  >
-                    {/* Accent Dot */}
-                    <span className="w-2 h-2 rounded-full bg-[#2596BE] flex-shrink-0" />
+              <div className={`flex gap-8 items-start ${selectedJob ? 'flex-col lg:flex-row' : 'flex-col'}`}>
 
-                    {/* Department Badge */}
-                    <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#2596BE] bg-[#2596BE]/[0.07] px-3 py-1.5 rounded-sm flex-shrink-0 min-w-[140px] text-center whitespace-nowrap">
-                      {job.department || 'General'}
-                    </span>
+                {/* Left: Job Rows */}
+                <div className={selectedJob ? 'w-full lg:w-1/2' : 'w-full'}>
+                  {/* Job Rows */}
+                  <div className="flex flex-col gap-3">
+                    {filteredJobs.map((job) => (
+                      <div
+                        key={job._id}
+                        onClick={() => setSelectedJob(job)}
+                        className="group flex items-center gap-5 px-7 py-6 bg-white border border-gray-200 rounded-lg cursor-pointer transition-all duration-200 hover:border-[#223B5B] hover:shadow-lg"
+                      >
+                        {/* Accent Dot */}
+                        <span className="w-2 h-2 rounded-full bg-[#2596BE] flex-shrink-0" />
 
-                    {/* Job Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-serif text-xl font-semibold text-[#223B5B] group-hover:text-[#2596BE] transition-colors">
-                        {job.title}
-                      </h3>
-                      <p className="text-xs text-gray-400 font-light mt-0.5">
-                        {job.slots} position{job.slots !== 1 ? 's' : ''} available
-                      </p>
-                    </div>
+                        {/* Department Badge */}
+                        <span className="text-xs font-medium text-[#2596BE] bg-[#2596BE]/[0.07] px-3 py-1.5 rounded-sm flex-shrink-0 min-w-[140px] text-center whitespace-nowrap">
+                          {job.department || 'General'}
+                        </span>
 
-                    {/* Meta (hidden on mobile) */}
-                    <div className="hidden sm:flex gap-6 ml-auto">
-                      <span className="text-xs text-gray-400 font-light flex items-center gap-1.5">
-                        📍 {job.country || 'Multiple Locations'}
-                      </span>
-                      <span className="text-xs text-gray-400 font-light flex items-center gap-1.5">
-                        ⏰ Full-time
-                      </span>
-                    </div>
+                        {/* Job Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#2596BE] transition-colors">
+                            {job.title}
+                          </h3>
+                          <p className="text-xs text-gray-400 font-light mt-0.5">
+                            {job.slots} position{job.slots !== 1 ? 's' : ''} available
+                          </p>
+                        </div>
 
-                    {/* Apply Button (hidden on mobile) */}
-                    {user?.role === 'employee'
-                      ? null
-                      : user && ['admin', 'super-admin', 'hr'].includes(user.role)
-                        ? null
-                        : <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const blockedAdminRoles = ['admin', 'super-admin', 'hr']
-                              
-                              if (user && blockedAdminRoles.includes(user.role)) {
-                                return
-                              }
+                        {/* Meta (hidden on mobile) */}
+                        <div className="hidden sm:flex gap-6 ml-auto">
+                          <span className="text-xs text-gray-400 font-light flex items-center gap-1.5">
+                            📍 {job.country || 'Multiple Locations'}
+                          </span>
+                          <span className="text-xs text-gray-400 font-light flex items-center gap-1.5">
+                            ⏰ Full-time
+                          </span>
+                        </div>
 
-                              if (user?.role === 'employee') {
-                                setEmployeeBlockMessage('You are already an employee. Contact HR for internal transfers.')
-                                return
-                              }
-
-                              if (!user) {
-                                setPendingJob(job);
-                                setSelectedJob(job);
-                                setAuthModalOpen(true);
-                              } else {
-                                setSelectedJob(job);
-                                setApplyModalOpen(true);
-                              }
-                            }}
-                            className="hidden md:flex px-5 py-2 text-xs font-semibold tracking-wide uppercase border border-[#223B5B] text-[#223B5B] rounded-sm group-hover:bg-[#223B5B] group-hover:text-white transition-all flex-shrink-0"
-                          >
-                            Apply Now
-                          </button>
-                    }
-
-                    {/* Arrow */}
-                    <span className="text-gray-300 ml-3 flex-shrink-0 transition-all group-hover:text-[#223B5B] group-hover:translate-x-1">
-                      -&gt;
-                    </span>
+                        {/* Arrow */}
+                        <span className="text-gray-300 ml-3 flex-shrink-0 transition-all group-hover:text-[#223B5B] group-hover:translate-x-1">
+                          -&gt;
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                {/* Right: Job Description Panel — only when selectedJob is not null */}
+                {selectedJob && (
+                  <div className="w-full lg:w-1/2 sticky top-[80px]">
+                    <div className="mt-6 bg-white border border-gray-200 rounded-lg p-8">
+                      <div className="flex items-start justify-between mb-6">
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-900">{selectedJob.title}</h2>
+                          <p className="text-sm text-[#2596BE] font-medium mt-1">{selectedJob.department}</p>
+                        </div>
+                        <button onClick={() => setSelectedJob(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
+                      </div>
+                      <div className="space-y-4 mb-6 text-sm text-gray-600">
+                        <p>📍 {selectedJob.country || 'Multiple Locations'}</p>
+                        <p>🪑 {selectedJob.slots} position{selectedJob.slots !== 1 ? 's' : ''} available</p>
+                      </div>
+                      {selectedJob.description && (
+                        <div className="mb-6">
+                          <h3 className="text-base font-bold text-gray-900 mb-2">Description</h3>
+                          <p className="text-sm text-gray-700 leading-relaxed">{selectedJob.description}</p>
+                        </div>
+                      )}
+                      {selectedJob.requirements && selectedJob.requirements.length > 0 && (
+                        <div className="mb-8">
+                          <h3 className="text-base font-bold text-gray-900 mb-2">Requirements</h3>
+                          <ul className="list-disc list-inside space-y-1">
+                            {selectedJob.requirements.map((req, idx) => (
+                              <li key={idx} className="text-sm text-gray-700">{req}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const blockedAdminRoles = ['admin', 'super-admin', 'hr'];
+                          if (user && blockedAdminRoles.includes(user.role)) return;
+                          if (user?.role === 'employee') {
+                            setEmployeeBlockMessage('You are already an employee. Contact HR for internal transfers.');
+                            return;
+                          }
+                          if (!user) {
+                            setPendingJob(selectedJob);
+                            setAuthModalOpen(true);
+                          } else {
+                            setApplyModalOpen(true);
+                          }
+                        }}
+                        className="px-8 py-3 text-sm font-semibold tracking-wide uppercase bg-[#223B5B] text-white rounded-sm hover:bg-[#2596BE] transition-colors"
+                      >
+                        Apply Now
+                      </button>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </>
           )}

@@ -8,6 +8,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-2xl',
+    '2xl': 'max-w-5xl',
+    '3xl': 'max-w-6xl',
   };
 
   return (
