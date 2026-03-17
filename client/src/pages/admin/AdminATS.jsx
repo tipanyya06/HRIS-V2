@@ -368,8 +368,8 @@ export default function ATS() {
                   className={[
                     'px-3 py-2 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap',
                     viewMode === opt.value
-                      ? 'bg-[#223B5B] border-[#223B5B] text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-[#223B5B] hover:text-[#223B5B]',
+                      ? 'bg-[#185FA5] border-[#185FA5] text-white hover:bg-[#0C447C] hover:border-[#0C447C]'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-[#185FA5] hover:text-[#185FA5]',
                   ].join(' ')}
                 >
                   {opt.label}

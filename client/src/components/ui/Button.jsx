@@ -12,16 +12,16 @@ export default function Button({
   ...props
 }) {
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
-    ghost: 'bg-transparent text-gray-600 hover:bg-gray-100',
+    primary: 'bg-[#185FA5] text-white border border-[#185FA5] hover:bg-[#0C447C]',
+    secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
+    danger: 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100',
+    ghost: 'bg-transparent text-gray-500 border border-transparent hover:bg-gray-50',
   };
 
   const sizes = {
-    sm: 'px-3 py-1 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'h-[26px] px-3 text-[11px] font-semibold',
+    md: 'h-[32px] px-4 text-[13px] font-medium',
+    lg: 'h-[40px] px-6 text-[14px] font-medium',
   };
 
   return (
@@ -32,9 +32,9 @@ export default function Button({
       className={`
         ${variants[variant]}
         ${sizes[size]}
-        rounded font-medium transition-colors
+        rounded-md transition-colors
         disabled:opacity-50 disabled:cursor-not-allowed
-        flex items-center gap-2
+        inline-flex items-center gap-2
         ${className}
       `}
       {...props}

@@ -61,13 +61,13 @@ export default function ApplicantLayout() {
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:relative lg:transform-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:relative lg:transform-none flex flex-col ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900">Madison 88</h2>
+          <h2 className="text-[20px] font-semibold text-[#1a3a5c]">Madison 88</h2>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="lg:hidden text-gray-600 hover:text-gray-900"
@@ -77,7 +77,7 @@ export default function ApplicantLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-6">
+        <nav className="flex-1 overflow-y-auto py-4">
           <div className="space-y-2 px-4">
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -88,13 +88,13 @@ export default function ApplicantLayout() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  className={`flex items-center gap-3 h-[36px] px-4 rounded-md text-[13px] transition-colors ${
                     isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-[#185FA5] border border-[#185FA5] text-white font-medium'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-[#1a3a5c] border border-transparent'
                   }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={18} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -106,7 +106,7 @@ export default function ApplicantLayout() {
         <div className="p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors"
+            className="flex items-center gap-3 w-full h-[36px] px-4 rounded-md text-[13px] text-gray-500 hover:bg-gray-50 hover:text-[#1a3a5c] font-medium transition-colors"
           >
             <LogOut size={20} />
             <span>Logout</span>
@@ -126,14 +126,14 @@ export default function ApplicantLayout() {
             >
               <Menu size={24} />
             </button>
-            <h1 className="hidden lg:block text-xl font-bold text-gray-900">
+            <h1 className="hidden lg:block text-[20px] font-semibold text-[#1a3a5c]">
               Madison 88 HRIS
             </h1>
           </div>
 
           {/* Center: Welcome Message */}
           <div className="hidden md:block">
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-[13px] text-gray-700">
               Welcome, {user?.personalInfo?.givenName || user?.email || 'Applicant'}
             </p>
           </div>
@@ -141,7 +141,7 @@ export default function ApplicantLayout() {
           {/* Right: NotificationBell & Email */}
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-[13px] text-gray-700">
               {user?.email}
             </p>
           </div>

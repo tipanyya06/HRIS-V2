@@ -299,10 +299,10 @@ export default function Jobs() {
           <button
             key={tabName}
             onClick={() => setTab(tabName)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
               tab === tabName
-                ? 'bg-[#223B5B] text-white'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                ? 'bg-[#185FA5] border-[#185FA5] text-white hover:bg-[#0C447C] hover:border-[#0C447C]'
+                : 'bg-white border-slate-200 text-slate-600 hover:border-[#185FA5] hover:text-[#185FA5]'
             }`}
           >
             {tabName.charAt(0).toUpperCase() + tabName.slice(1)}

@@ -10,16 +10,16 @@ export default function Table({
   if (isLoading) return <LoadingSpinner />;
 
   if (data.length === 0) {
-    return <div className="p-4 text-center text-gray-500">{emptyMessage}</div>;
+    return <div className="py-10 text-[13px] text-gray-400 text-center">{emptyMessage}</div>;
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead className="bg-gray-100">
+    <div className="w-full overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">
+              <th key={col.key} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50 border-b border-gray-200">
                 {col.label}
               </th>
             ))}
@@ -27,9 +27,9 @@ export default function Table({
         </thead>
         <tbody>
           {data.map((row, idx) => (
-            <tr key={idx} className="border-b hover:bg-gray-50">
+            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0">
               {columns.map((col) => (
-                <td key={col.key} className="px-4 py-2 text-sm text-gray-900">
+                <td key={col.key} className="px-4 py-3 text-[13px] text-gray-700">
                   {col.render ? col.render(row) : row[col.key]}
                 </td>
               ))}

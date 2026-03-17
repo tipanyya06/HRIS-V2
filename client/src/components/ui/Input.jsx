@@ -14,7 +14,7 @@ export default function Input({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <label htmlFor={name} className="text-sm font-medium text-gray-700">
+        <label htmlFor={name} className="text-[11px] font-semibold uppercase tracking-widest text-gray-700">
           {label} {isRequired ? <span className="text-red-500">*</span> : null}
         </label>
       ) : null}
@@ -27,13 +27,13 @@ export default function Input({
         placeholder={placeholder}
         disabled={isDisabled}
         className={`
-          w-full px-3 py-2 border rounded
-          focus:outline-none focus:ring-2
-          ${error ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'}
+          w-full h-[32px] px-3 bg-white text-[13px] text-gray-700 border rounded-md
+          focus:outline-none focus:ring-1
+          ${error ? 'border-red-400 focus:ring-red-200 focus:border-red-400' : 'border-gray-200 focus:ring-[#185FA5] focus:border-[#185FA5]'}
           disabled:bg-gray-100 disabled:cursor-not-allowed
         `}
       />
-      {error ? <span className="text-sm text-red-500">{error}</span> : null}
+      {error ? <span className="text-[12px] text-red-500">{error}</span> : null}
     </div>
   );
 }

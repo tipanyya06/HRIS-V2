@@ -25,7 +25,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img src="/darklogo.png" alt="Madison 88" style={{ height: '50px' }} />
+            <img src="/darklogo.png" alt="Madison 88" className="h-[50px]" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -34,8 +34,7 @@ export default function Navbar() {
               <Link
                 key={link.path}
                 to={link.path}
-                className="text-gray-700 hover:text-blue-600 transition-colors"
-                style={{ fontSize: '15px' }}
+                className="text-[13px] text-gray-500 hover:text-[#1a3a5c] transition-colors"
               >
                 {link.label}
               </Link>
@@ -44,10 +43,10 @@ export default function Navbar() {
             {/* Auth Buttons */}
             {user ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">{user.email}</span>
+                <span className="text-[13px] text-gray-700">{user.email}</span>
                 <button
                   onClick={handleLogout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="inline-flex items-center h-[26px] px-3 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-semibold hover:bg-red-100 transition-colors"
                 >
                   Logout
                 </button>
@@ -55,7 +54,7 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={() => navigate('/login')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center h-[32px] px-4 bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#0C447C] transition-colors"
               >
                 Sign In
               </button>
@@ -100,7 +99,7 @@ export default function Navbar() {
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsMenuOpen(false)}
-                className="block text-gray-700 hover:text-blue-600 transition-colors py-2"
+                className="block text-[13px] text-gray-500 hover:text-[#1a3a5c] transition-colors py-2"
               >
                 {link.label}
               </Link>
@@ -108,13 +107,13 @@ export default function Navbar() {
             
             {user ? (
               <>
-                <div className="text-sm text-gray-600 py-2">{user.email}</div>
+                <div className="text-[13px] text-gray-700 py-2">{user.email}</div>
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="w-full inline-flex items-center justify-center h-[26px] px-3 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-semibold hover:bg-red-100 transition-colors"
                 >
                   Logout
                 </button>
@@ -125,7 +124,7 @@ export default function Navbar() {
                   navigate('/login');
                   setIsMenuOpen(false);
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="w-full inline-flex items-center justify-center h-[32px] px-4 bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#0C447C] transition-colors"
               >
                 Sign In
               </button>
