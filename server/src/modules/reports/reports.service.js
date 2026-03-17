@@ -570,3 +570,157 @@ export const getTrainingCompletionTrend = async (filters = {}) => {
   }
 };
 
+export const getCustomReportData = async (fields = [], filters = {}) => {
+  try {
+    const { department, countryOfEmployment, dateFrom, dateTo } = filters;
+    const fromDate = parseDateOrNull(dateFrom);
+    const toDate = parseDateOrNull(dateTo);
+
+    if (fromDate && toDate && fromDate > toDate) {
+      const error = new Error('dateFrom cannot be after dateTo');
+      error.status = 400;
+      throw error;
+    }
+
+    const query = { role: 'employee', isActive: true };
+    if (department) query.department = department;
+    if (countryOfEmployment) query.countryOfEmployment = countryOfEmployment;
+    if (fromDate || toDate) {
+      query.dateOfEmployment = {};
+      if (fromDate) query.dateOfEmployment.$gte = fromDate;
+      if (toDate) query.dateOfEmployment.$lte = toDate;
+    }
+
+    const employees = await User.find(query)
+      .select('-password')
+      .lean();
+
+    return employees.map((emp) => {
+      const row = {};
+      fields.forEach((field) => {
+        switch (field) {
+          case 'Full Name':
+            row[field] = `${emp.personalInfo?.givenName || ''} ${emp.personalInfo?.lastName || ''}`.trim() || '-';
+            break;
+          case 'Given Name':
+            row[field] = emp.personalInfo?.givenName || '-';
+            break;
+          case 'Last Name':
+            row[field] = emp.personalInfo?.lastName || '-';
+            break;
+          case 'Middle Name':
+            row[field] = emp.personalInfo?.middleName || '-';
+            break;
+          case 'Date of Birth':
+            row[field] = emp.personalInfo?.dateOfBirth || '-';
+            break;
+          case 'Sex':
+            row[field] = emp.personalInfo?.sex || '-';
+            break;
+          case 'Civil Status':
+            row[field] = emp.personalInfo?.civilStatus || '-';
+            break;
+          case 'Religion':
+            row[field] = emp.personalInfo?.religion || '-';
+            break;
+          case 'Nationality':
+            row[field] = emp.personalInfo?.nationality || '-';
+            break;
+          case 'Personal Email':
+            row[field] = emp.contactInfo?.personalEmail || '-';
+            break;
+          case 'Company Email':
+            row[field] = emp.email || '-';
+            break;
+          case 'Main Contact No':
+            row[field] = emp.contactInfo?.mainContactNo || '-';
+            break;
+          case 'Address':
+            row[field] = [
+              emp.contactInfo?.address?.addressLine,
+              emp.contactInfo?.address?.city,
+              emp.contactInfo?.address?.province,
+              emp.contactInfo?.address?.country,
+            ].filter(Boolean).join(', ') || '-';
+            break;
+          case 'Department':
+            row[field] = emp.department || '-';
+            break;
+          case 'Position':
+            row[field] = emp.positionTitle || '-';
+            break;
+          case 'Classification':
+            row[field] = emp.classification || '-';
+            break;
+          case 'Country of Employment':
+            row[field] = emp.countryOfEmployment || '-';
+            break;
+          case 'Date of Employment':
+            row[field] = emp.dateOfEmployment ? new Date(emp.dateOfEmployment).toLocaleDateString() : '-';
+            break;
+          case 'Blood Type':
+            row[field] = emp.hmoInfo?.bloodType || '-';
+            break;
+          case 'HMO Provider':
+            row[field] = emp.hmoInfo?.provider || '-';
+            break;
+          case 'HMO Card Number':
+            row[field] = emp.hmoInfo?.cardNumber || '-';
+            break;
+          case 'SSS':
+            row[field] = emp.governmentIds?.sss || '-';
+            break;
+          case 'TIN':
+            row[field] = emp.governmentIds?.tin || '-';
+            break;
+          case 'Pag-IBIG':
+            row[field] = emp.governmentIds?.pagIbig || '-';
+            break;
+          case 'PhilHealth':
+            row[field] = emp.governmentIds?.philhealth || '-';
+            break;
+          case 'Emergency Contact Name':
+            row[field] = emp.emergencyContact?.name || '-';
+            break;
+          case 'Emergency Contact No':
+            row[field] = emp.emergencyContact?.contact || '-';
+            break;
+          case 'Emergency Relationship':
+            row[field] = emp.emergencyContact?.relationship || '-';
+            break;
+          case 'Bank Name':
+            row[field] = emp.payrollInfo?.bankName || '-';
+            break;
+          case 'Account Name':
+            row[field] = emp.payrollInfo?.accountName || '-';
+            break;
+          case 'School':
+            row[field] = emp.education?.schoolName || '-';
+            break;
+          case 'Course':
+            row[field] = emp.education?.course || '-';
+            break;
+          case 'Attainment':
+            row[field] = emp.education?.attainment || '-';
+            break;
+          default:
+            row[field] = '-';
+        }
+      });
+      return row;
+    });
+  } catch (error) {
+    logger.error(`Custom report error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getPESOReportData = async (filters = {}) => {
+  const PESO_FIELDS = [
+    'Full Name', 'Date of Birth', 'Sex', 'Address', 'Civil Status',
+    'SSS', 'PhilHealth', 'TIN', 'Pag-IBIG', 'Position',
+    'Date of Employment', 'Department',
+  ];
+  return getCustomReportData(PESO_FIELDS, filters);
+};
+

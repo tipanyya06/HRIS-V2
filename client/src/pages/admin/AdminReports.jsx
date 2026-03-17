@@ -21,6 +21,26 @@ export default function Reports() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [department, setDepartment] = useState('');
+  const [customFields, setCustomFields] = useState([]);
+  const [customReportName, setCustomReportName] = useState('Custom Report');
+  const [customFilters, setCustomFilters] = useState({
+    countryOfEmployment: '',
+  });
+  const [customData, setCustomData] = useState([]);
+  const [isCustomLoading, setIsCustomLoading] = useState(false);
+  const [pesoData, setPesoData] = useState([]);
+  const [isPesoLoading, setIsPesoLoading] = useState(false);
+
+  const AVAILABLE_FIELDS = [
+    { category: 'Personal', fields: ['Full Name', 'Given Name', 'Last Name', 'Middle Name', 'Date of Birth', 'Sex', 'Civil Status', 'Religion', 'Nationality'] },
+    { category: 'Contact', fields: ['Personal Email', 'Company Email', 'Main Contact No', 'Address'] },
+    { category: 'Employment', fields: ['Department', 'Position', 'Classification', 'Country of Employment', 'Date of Employment'] },
+    { category: 'Government IDs', fields: ['SSS', 'TIN', 'Pag-IBIG', 'PhilHealth'] },
+    { category: 'HMO', fields: ['Blood Type', 'HMO Provider', 'HMO Card Number'] },
+    { category: 'Emergency Contact', fields: ['Emergency Contact Name', 'Emergency Contact No', 'Emergency Relationship'] },
+    { category: 'Education', fields: ['School', 'Course', 'Attainment'] },
+    { category: 'Payroll', fields: ['Bank Name', 'Account Name'] },
+  ];
 
   const getFilterParams = () => ({
     dateFrom: dateFrom || undefined,
@@ -30,7 +50,9 @@ export default function Reports() {
 
   // Fetch report data when tab changes
   useEffect(() => {
-    fetchReportData(activeTab);
+    if (['ats', 'headcount', 'employees', 'training'].includes(activeTab)) {
+      fetchReportData(activeTab);
+    }
   }, [activeTab, dateFrom, dateTo, department]);
 
   useEffect(() => {
@@ -94,6 +116,92 @@ export default function Reports() {
     }
   };
 
+  const fetchCustomReport = async () => {
+    if (!customFields.length) return;
+    setIsCustomLoading(true);
+    try {
+      const res = await api.post('/reports/custom', {
+        fields: customFields,
+        filters: { ...getFilterParams(), ...customFilters },
+      });
+      setCustomData(res.data.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Failed to load custom report');
+    } finally {
+      setIsCustomLoading(false);
+    }
+  };
+
+  const fetchPesoReport = async () => {
+    setIsPesoLoading(true);
+    try {
+      const res = await api.get('/reports/peso', {
+        params: { ...getFilterParams(), ...customFilters },
+      });
+      setPesoData(res.data.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Failed to load PESO report');
+    } finally {
+      setIsPesoLoading(false);
+    }
+  };
+
+  const handleCustomExport = async (format) => {
+    setIsExporting(`${format}-custom`);
+    try {
+      const res = await api.post(
+        `/reports/custom/export/${format}`,
+        {
+          fields: customFields,
+          filters: { ...getFilterParams(), ...customFilters },
+          reportName: customReportName,
+        },
+        { responseType: 'blob' }
+      );
+      const ext = format === 'xlsx' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      const url = window.URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${customReportName}-${new Date().toISOString().split('T')[0]}.${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to export custom report');
+    } finally {
+      setIsExporting('');
+    }
+  };
+
+  const handlePesoExport = async (format) => {
+    setIsExporting(`${format}-peso`);
+    try {
+      const res = await api.post(
+        `/reports/peso/export/${format}`,
+        { filters: { ...getFilterParams(), ...customFilters } },
+        { responseType: 'blob' }
+      );
+      const ext = format === 'xlsx' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      const url = window.URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `PESO-Report-${new Date().toISOString().split('T')[0]}.${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to export PESO report');
+    } finally {
+      setIsExporting('');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'peso') fetchPesoReport();
+  }, [activeTab]);
+
   const handleExport = async (format) => {
     setIsExporting(format);
     try {
@@ -109,7 +217,7 @@ export default function Reports() {
       const url = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${activeTab}-report-${new Date().toISOString().split('T')[0]}.${format === 'csv' ? 'csv' : 'pdf'}`);
+      link.setAttribute('download', `${activeTab}-report-${new Date().toISOString().split('T')[0]}.${format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'}`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -157,7 +265,7 @@ export default function Reports() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
-        {['ats', 'headcount', 'employees', 'training'].map((tab) => (
+        {['ats', 'headcount', 'employees', 'training', 'custom', 'peso'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -171,27 +279,66 @@ export default function Reports() {
             {tab === 'headcount' && 'Headcount'}
             {tab === 'employees' && 'Employee Status'}
             {tab === 'training' && 'Training'}
+            {tab === 'custom' && 'Custom Report'}
+            {tab === 'peso' && 'PESO Report'}
           </button>
         ))}
       </div>
 
-      {/* Export Buttons */}
-      <div className="flex gap-2">
+      {/* Global Export Bar */}
+      <div className="flex gap-2 flex-wrap">
         <button
-          onClick={() => handleExport('csv')}
-          disabled={isExporting === 'csv' || isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          onClick={() => {
+            if (activeTab === 'custom') handleCustomExport('csv');
+            else if (activeTab === 'peso') handlePesoExport('csv');
+            else handleExport('csv');
+          }}
+          disabled={
+            (activeTab === 'peso' && !pesoData.length) ||
+            !!isExporting || (activeTab !== 'custom' && isLoading)
+          }
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
         >
-          {isExporting === 'csv' ? <Loader size={18} className="animate-spin" /> : <Download size={18} />}
-          {isExporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+          {isExporting === 'csv' || isExporting === 'csv-custom' || isExporting === 'csv-peso'
+            ? <Loader size={16} className="animate-spin" />
+            : <Download size={16} />}
+          Export CSV
         </button>
+
         <button
-          onClick={() => handleExport('pdf')}
-          disabled={isExporting === 'pdf' || isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+          onClick={() => {
+            if (activeTab === 'custom') handleCustomExport('xlsx');
+            else if (activeTab === 'peso') handlePesoExport('xlsx');
+            else handleExport('xlsx');
+          }}
+          disabled={
+            (activeTab === 'peso' && !pesoData.length) ||
+            !!isExporting || (activeTab !== 'custom' && isLoading)
+          }
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 text-sm"
         >
-          {isExporting === 'pdf' ? <Loader size={18} className="animate-spin" /> : <Download size={18} />}
-          {isExporting === 'pdf' ? 'Exporting...' : 'Export PDF'}
+          {isExporting === 'xlsx' || isExporting === 'xlsx-custom' || isExporting === 'xlsx-peso'
+            ? <Loader size={16} className="animate-spin" />
+            : <Download size={16} />}
+          Export Excel
+        </button>
+
+        <button
+          onClick={() => {
+            if (activeTab === 'custom') handleCustomExport('pdf');
+            else if (activeTab === 'peso') handlePesoExport('pdf');
+            else handleExport('pdf');
+          }}
+          disabled={
+            (activeTab === 'peso' && !pesoData.length) ||
+            !!isExporting || (activeTab !== 'custom' && isLoading)
+          }
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
+        >
+          {isExporting === 'pdf' || isExporting === 'pdf-custom' || isExporting === 'pdf-peso'
+            ? <Loader size={16} className="animate-spin" />
+            : <Download size={16} />}
+          Export PDF
         </button>
       </div>
 
@@ -498,6 +645,255 @@ export default function Reports() {
             <p className="text-gray-500">No data available</p>
           </Card>
         )
+      )}
+
+      {activeTab === 'custom' && (
+        <div className="space-y-4">
+          <Card>
+            <h2 className="text-lg font-bold mb-4">Custom Report Builder</h2>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Report Name
+              </label>
+              <input
+                type="text"
+                value={customReportName}
+                onChange={(e) => setCustomReportName(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm w-full max-w-sm"
+                placeholder="Enter report name..."
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country of Employment
+              </label>
+              <select
+                value={customFilters.countryOfEmployment}
+                onChange={(e) => setCustomFilters((prev) => ({
+                  ...prev, countryOfEmployment: e.target.value,
+                }))}
+                className="px-3 py-2 border border-gray-300 rounded text-sm"
+              >
+                <option value="">All Countries</option>
+                <option value="Philippines">Philippines</option>
+                <option value="USA">USA</option>
+                <option value="Indonesia">Indonesia</option>
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-gray-700">
+                  Select Fields ({customFields.length} selected)
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCustomFields(
+                      AVAILABLE_FIELDS.flatMap(c => c.fields)
+                    )}
+                    className="text-xs text-blue-600 hover:underline font-medium"
+                  >
+                    Select All Fields
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    onClick={() => setCustomFields([])}
+                    className="text-xs text-red-500 hover:underline font-medium"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {AVAILABLE_FIELDS.map(({ category, fields }) => (
+                  <div key={category}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{category}</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCustomFields(prev => {
+                            const newFields = [...new Set([...prev, ...fields])];
+                            return newFields;
+                          })}
+                          className="text-[11px] text-blue-600 hover:underline"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-gray-300 text-xs">|</span>
+                        <button
+                          onClick={() => setCustomFields(prev =>
+                            prev.filter(f => !fields.includes(f))
+                          )}
+                          className="text-[11px] text-red-500 hover:underline"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {fields.map((field) => (
+                        <button
+                          key={field}
+                          onClick={() => setCustomFields((prev) =>
+                            prev.includes(field)
+                              ? prev.filter((f) => f !== field)
+                              : [...prev, field]
+                          )}
+                          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                            customFields.includes(field)
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                          }`}
+                        >
+                          {field}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={fetchCustomReport}
+                disabled={!customFields.length || isCustomLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+              >
+                {isCustomLoading ? <Loader size={14} className="animate-spin" /> : null}
+                Generate Report
+              </button>
+            </div>
+          </Card>
+
+          {customData.length > 0 && (
+            <Card>
+              <h3 className="text-lg font-bold mb-4">
+                {customReportName} - {customData.length} employees
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">
+                        No.
+                      </th>
+                      {customFields.map((field) => (
+                        <th key={field} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
+                          {field}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customData.map((row, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                        {customFields.map((field) => (
+                          <td key={field} className="px-3 py-2 whitespace-nowrap">
+                            {row[field] || '-'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'peso' && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold">PESO Report</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Fixed columns required for PESO compliance reporting
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country of Employment
+              </label>
+              <select
+                value={customFilters.countryOfEmployment}
+                onChange={(e) => setCustomFilters((prev) => ({
+                  ...prev, countryOfEmployment: e.target.value,
+                }))}
+                className="px-3 py-2 border border-gray-300 rounded text-sm"
+              >
+                <option value="">All Countries</option>
+                <option value="Philippines">Philippines</option>
+                <option value="USA">USA</option>
+                <option value="Indonesia">Indonesia</option>
+              </select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-xs font-semibold text-blue-700 mb-2">
+                Fixed PESO Columns:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {['Full Name', 'Date of Birth', 'Sex', 'Address', 'Civil Status',
+                  'SSS', 'PhilHealth', 'TIN', 'Pag-IBIG', 'Position',
+                  'Date of Employment', 'Department'].map((f) => (
+                  <span key={f} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{f}</span>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {isPesoLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader size={32} className="animate-spin text-blue-600" />
+            </div>
+          ) : pesoData.length > 0 ? (
+            <Card>
+              <h3 className="text-lg font-bold mb-4">
+                PESO Report - {pesoData.length} employees
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">No.</th>
+                      {['Full Name', 'Date of Birth', 'Sex', 'Address', 'Civil Status',
+                        'SSS', 'PhilHealth', 'TIN', 'Pag-IBIG', 'Position',
+                        'Date of Employment', 'Department'].map((f) => (
+                        <th key={f} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">{f}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pesoData.map((row, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                        {['Full Name', 'Date of Birth', 'Sex', 'Address', 'Civil Status',
+                          'SSS', 'PhilHealth', 'TIN', 'Pag-IBIG', 'Position',
+                          'Date of Employment', 'Department'].map((f) => (
+                          <td key={f} className="px-3 py-2 whitespace-nowrap">
+                            {row[f] || '-'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : (
+            <Card>
+              <p className="text-gray-500 text-center py-4">No employee data found</p>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );
