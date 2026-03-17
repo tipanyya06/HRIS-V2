@@ -115,7 +115,7 @@ function MiniCalendar({ baseDate, onShift, onDayClick, events }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 w-full flex-1">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-slate-700">
           {MONTHS_FULL[m]} {y}
@@ -198,7 +198,7 @@ function UpcomingList({ interviews, onSelect }) {
   const hasAnything = upcoming.length > 0;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex-1">
+    <div className="bg-white border border-slate-200 rounded-xl p-2.5 flex-1">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">Upcoming</p>
 
       {!hasAnything ? (
@@ -206,7 +206,7 @@ function UpcomingList({ interviews, onSelect }) {
       ) : null}
 
       {upcoming.length > 0 ? (
-        <div>
+        <div className="overflow-y-auto max-h-[160px]">
           {upcoming.map((ev) => {
             const d   = new Date(ev.scheduledAt);
             const sty = STATUS_STYLE[ev.status] || STATUS_STYLE.scheduled;
@@ -240,12 +240,12 @@ function NeedsSchedulingList({ interviews, onSelect, onSchedule }) {
     .slice(0, 8);
 
   return (
-    <div className="bg-white border border-amber-200 rounded-xl p-4">
+    <div className="bg-white border border-amber-200 rounded-xl p-2.5">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 mb-3">Needs Scheduling</p>
       {needsScheduling.length === 0 ? (
         <p className="text-xs text-slate-400 py-3 text-center">No pending interviews</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto max-h-[160px]">
           {needsScheduling.map((ev) => (
             <div
               key={ev._id}
@@ -271,6 +271,68 @@ function NeedsSchedulingList({ interviews, onSelect, onSchedule }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function MissedList({ interviews, onSelect, onMarkDone }) {
+  const now = new Date();
+  const missed = interviews
+    .filter((e) => {
+      if (!e.scheduledAt) return false;
+      const dt = new Date(e.scheduledAt);
+      if (isNaN(dt.getTime())) return false;
+      return (
+        dt < now &&
+        e.status !== 'completed' &&
+        e.status !== 'cancelled'
+      );
+    })
+    .sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt))
+    .slice(0, 8);
+
+  if (missed.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-red-200 rounded-xl p-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-red-500 mb-3">
+        Missed · {missed.length}
+      </p>
+      <div className="space-y-2 overflow-y-auto max-h-[200px]">
+        {missed.map((ev) => {
+          const d = new Date(ev.scheduledAt);
+          return (
+            <div
+              key={ev._id}
+              className="rounded-lg border border-red-100 bg-red-50 p-2.5"
+            >
+              <button
+                onClick={() => onSelect(ev)}
+                className="w-full text-left"
+              >
+                <p className="text-xs font-semibold text-red-900 truncate">
+                  {ev.applicantId?.fullName || 'Candidate'}
+                </p>
+                <p className="text-[11px] text-red-600 truncate">
+                  {ev.jobId?.title || 'Unassigned role'}
+                </p>
+                <p className="text-[10px] text-red-400 mt-0.5">
+                  {DAYS_SHORT[d.getDay()]}, {MONTHS_FULL[d.getMonth()].slice(0,3)} {d.getDate()} · {fmt12(d.getHours(), d.getMinutes())}
+                </p>
+              </button>
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onMarkDone(ev)}
+                >
+                  Mark as Done
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -556,11 +618,24 @@ export default function Interviews() {
     interviews.forEach((e) => {
       if (counts[e.status] !== undefined) counts[e.status]++;
     });
+
+    const now = new Date();
+    const missedCount = interviews.filter((e) => {
+      if (!e.scheduledAt) return false;
+      const dt = new Date(e.scheduledAt);
+      return (
+        dt < now &&
+        e.status !== 'completed' &&
+        e.status !== 'cancelled'
+      );
+    }).length;
+
     return {
       active: counts.pending + counts.scheduled + counts.rescheduled,
       pending: counts.pending,
       scheduled: counts.scheduled + counts.rescheduled,
       completed: counts.completed,
+      missed: missedCount,
     };
   }, [interviews]);
 
@@ -699,6 +774,29 @@ export default function Interviews() {
     }
   };
 
+  const handleMarkDone = async (interview) => {
+    try {
+      setIsUpdating(true);
+      await api.patch(`/interviews/${interview._id}/status`, {
+        status: 'completed'
+      });
+      setInterviews((prev) =>
+        prev.map((item) =>
+          item._id === interview._id
+            ? { ...item, status: 'completed' }
+            : item
+        )
+      );
+      setToastType('success');
+      setToastMessage('Interview marked as completed.');
+    } catch (error) {
+      setToastType('error');
+      setToastMessage(extractErrorMessage(error, 'Failed to update interview.'));
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // ── open detail from slide-over → schedule modal
   const openScheduleModal = (interview) => {
     setDetailItem(null);
@@ -738,7 +836,28 @@ export default function Interviews() {
         subtitle="Track and manage scheduled interviews"
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="w-full bg-white border border-slate-200 rounded-xl p-4 mb-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Filter by Status</p>
+        <div className="flex items-center gap-2 flex-wrap justify-start w-full">
+          <div className="min-w-[220px]">
+            <Select
+              label=""
+              name="statusFilter"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setActiveFilter(e.target.value || 'all');
+              }}
+              options={[{ value: '', label: 'All Statuses' }, ...STATUS_OPTIONS]}
+            />
+          </div>
+          <Button onClick={loadInterviews} variant="primary" size="sm">
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         <Card className="border border-slate-200">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">TOTAL ACTIVE</p>
           <p className="text-2xl font-bold text-[#223B5B]">{stats.active}</p>
@@ -755,6 +874,10 @@ export default function Interviews() {
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">COMPLETED</p>
           <p className="text-2xl font-bold text-[#223B5B]">{stats.completed}</p>
         </Card>
+        <Card className="border border-red-200">
+          <p className="text-xs font-medium text-red-400 uppercase tracking-wide mb-1">MISSED</p>
+          <p className="text-2xl font-bold text-red-500">{stats.missed}</p>
+        </Card>
       </div>
 
       {/* ── Error Banner */}
@@ -769,27 +892,43 @@ export default function Interviews() {
           <LoadingSpinner size="lg" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4 items-start">
 
-          {/* ── LEFT SIDEBAR ── */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col" style={{ minHeight: 'calc(90px + 44px + 24px)' }}>
+              <MiniCalendar
+                baseDate={miniBase}
+                onShift={(dir) => setMiniBase((prev) => {
+                  const next = new Date(prev);
+                  next.setMonth(next.getMonth() + dir);
+                  return next;
+                })}
+                onDayClick={(d) => setCurWeekStart(getWeekStart(d))}
+                events={calendarEvents}
+              />
+            </div>
 
-            {/* Mini calendar */}
-            <MiniCalendar
-              baseDate={miniBase}
-              onShift={(dir) => setMiniBase((prev) => {
-                const next = new Date(prev);
-                next.setMonth(next.getMonth() + dir);
-                return next;
-              })}
-              onDayClick={(d) => setCurWeekStart(getWeekStart(d))}
-              events={calendarEvents}
-            />
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Legend</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {Object.entries(STATUS_STYLE).map(([key, sty]) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-sm border-l-2 ${sty.bg} ${sty.border}`} />
+                    <span className="text-[11px] text-slate-500">{sty.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            {/* Upcoming list */}
             <UpcomingList
               interviews={['admin', 'super-admin'].includes(user?.role) ? interviews : []}
               onSelect={(ev) => setDetailItem(ev)}
+            />
+
+            <MissedList
+              interviews={['admin', 'super-admin'].includes(user?.role) ? interviews : []}
+              onSelect={(ev) => setDetailItem(ev)}
+              onMarkDone={handleMarkDone}
             />
 
             <NeedsSchedulingList
@@ -797,40 +936,8 @@ export default function Interviews() {
               onSelect={(ev) => setDetailItem(ev)}
               onSchedule={openScheduleModal}
             />
-
-            {/* Legend */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">Legend</p>
-              <div className="flex flex-col gap-2">
-                {Object.entries(STATUS_STYLE).map(([key, sty]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-sm border-l-2 ${sty.bg} ${sty.border}`} />
-                    <span className="text-xs text-slate-600">{sty.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Refresh + status quick-filter */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Filter by Status</p>
-              <Select
-                label=""
-                name="statusFilter"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setActiveFilter(e.target.value || 'all');
-                }}
-                options={[{ value: '', label: 'All Statuses' }, ...STATUS_OPTIONS]}
-              />
-              <Button onClick={loadInterviews} variant="primary" className="w-full">
-                Refresh
-              </Button>
-            </div>
           </div>
 
-          {/* ── MAIN CALENDAR ── */}
           <div className="flex flex-col gap-3">
 
             {/* Topbar */}
