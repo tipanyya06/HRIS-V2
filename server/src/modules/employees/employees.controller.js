@@ -1,5 +1,11 @@
 import * as employeeService from './employees.service.js';
 import { logActivity } from '../../middleware/activityLogger.js';
+import multer from 'multer';
+import {
+  uploadEmployeeDocument,
+  deleteEmployeeDocument,
+  getEmployeeDocuments,
+} from './employees.service.js';
 
 const createError = (status, message) => {
   const err = new Error(message);
@@ -133,6 +139,52 @@ export const updateEmployeeStatusController = async (req, res, next) => {
       message: `Employee status updated to ${status}`,
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Document Controllers ────────────────────────────────────────────────────
+
+const upload = multer({ storage: multer.memoryStorage() });
+export const uploadMiddleware = upload.single('file');
+
+export const uploadEmployeeDocController = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const { id } = req.params;
+    const { docType = 'other', label = '' } = req.body;
+    const allowed = ['contract', 'government-id', 'nbi', 'medical', 'clearance', 'other'];
+
+    if (!allowed.includes(docType))
+      return res.status(400).json({ error: `Invalid docType. Must be: ${allowed.join(', ')}` });
+
+    const doc = await uploadEmployeeDocument(id, req.file, docType, label);
+    res.status(201).json({ success: true, message: 'Document uploaded successfully', data: doc });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEmployeeDocController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { filePath } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'filePath is required' });
+
+    const result = await deleteEmployeeDocument(id, filePath);
+    res.status(200).json({ success: true, message: 'Document deleted', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmployeeDocsController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await getEmployeeDocuments(id);
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,12 @@
 import express from 'express';
 import * as employeeController from './employees.controller.js';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
+import {
+  getEmployeeDocsController,
+  uploadEmployeeDocController,
+  deleteEmployeeDocController,
+  uploadMiddleware,
+} from './employees.controller.js';
 
 const router = express.Router();
 
@@ -18,6 +24,29 @@ router.patch(
   verifyToken,
   requireRole(['admin', 'super-admin', 'hr']),
   employeeController.updateEmployeeStatusController
+);
+
+// Document routes — all before /:id catch-all
+router.get(
+  '/:id/documents',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  getEmployeeDocsController
+);
+
+router.post(
+  '/:id/documents',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  uploadMiddleware,
+  uploadEmployeeDocController
+);
+
+router.delete(
+  '/:id/documents',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  deleteEmployeeDocController
 );
 
 // Employee-accessible routes (authorization checked in controller)

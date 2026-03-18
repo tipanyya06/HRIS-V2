@@ -124,9 +124,20 @@ export default function Employees() {
       setIsDetailLoading(true);
       setProfileTab('personal');
       setStatusError('');
+      setDocError('');
+      setDocuments([]);
       setIsDetailOpen(true);
       const res = await api.get(`/employees/${employee._id}`);
-      setSelectedEmployee(normalizeStatus(res.data?.data || res.data || null));
+      const emp = normalizeStatus(res.data?.data || res.data || null);
+      setSelectedEmployee(emp);
+      if (emp) {
+        try {
+          const docsRes = await api.get(`/employees/${emp._id}/documents`);
+          setDocuments(docsRes.data?.data?.documents ?? []);
+        } catch {
+          setDocuments([]);
+        }
+      }
     } catch (err) {
       const message = err.response?.data?.error || 'Failed to load employee details';
       setToast({ message, type: 'error' });
@@ -192,6 +203,50 @@ export default function Employees() {
   // State for inline status change from the detail modal sidebar
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState('');
+
+  // Document state
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [docType, setDocType] = useState('other');
+  const [docLabel, setDocLabel] = useState('');
+  const [docFile, setDocFile] = useState(null);
+  const [docError, setDocError] = useState('');
+
+  const handleDocUpload = async () => {
+    if (!docFile) { setDocError('Please select a file'); return; }
+    try {
+      setUploadLoading(true);
+      setDocError('');
+      const formData = new FormData();
+      formData.append('file', docFile);
+      formData.append('docType', docType);
+      formData.append('label', docLabel || docType);
+      await api.post(`/employees/${selectedEmployee._id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const res = await api.get(`/employees/${selectedEmployee._id}/documents`);
+      setDocuments(res.data?.data?.documents ?? []);
+      setDocFile(null);
+      setDocLabel('');
+      setDocType('other');
+    } catch (err) {
+      setDocError(err.response?.data?.error ?? 'Upload failed');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const handleDocDelete = async (filePath) => {
+    const confirmed = window.confirm('Delete this document? This cannot be undone.');
+    if (!confirmed) return;
+    try {
+      await api.delete(`/employees/${selectedEmployee._id}/documents`, { data: { filePath } });
+      setDocuments(prev => prev.filter(d => d.filePath !== filePath));
+    } catch {
+      setDocError('Failed to delete document');
+    }
+  };
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -615,6 +670,7 @@ export default function Employees() {
                   { key: 'contact', label: 'Contact & Emergency' },
                   { key: 'employment', label: 'Employment Info' },
                   { key: 'government', label: 'Government IDs' },
+                  { key: 'documents', label: 'Documents' },
                 ].map(tab => (
                   <button
                     key={tab.key}
@@ -757,6 +813,97 @@ export default function Employees() {
                     <p className="text-sm text-gray-400">No government ID information available.</p>
                   )
                 )}
+
+                {/* Documents */}
+                {profileTab === 'documents' ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <p className="text-[12px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Upload document</p>
+                      <div className="flex flex-col gap-2">
+                        <select
+                          value={docType}
+                          onChange={e => setDocType(e.target.value)}
+                          className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none w-full"
+                        >
+                          <option value="contract">Employment contract</option>
+                          <option value="government-id">Government ID</option>
+                          <option value="nbi">NBI clearance</option>
+                          <option value="medical">Medical certificate</option>
+                          <option value="clearance">Clearance</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Label (optional)"
+                          value={docLabel}
+                          onChange={e => setDocLabel(e.target.value)}
+                          className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none w-full"
+                        />
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={e => setDocFile(e.target.files?.[0] ?? null)}
+                          className="text-[12px] text-gray-600 w-full"
+                        />
+                        {docError ? (
+                          <p className="text-[11px] text-red-600">{docError}</p>
+                        ) : null}
+                        <button
+                          onClick={handleDocUpload}
+                          disabled={uploadLoading || !docFile}
+                          className="h-[32px] px-4 bg-[#185FA5] text-white rounded-md text-[12px] font-medium hover:bg-[#0C447C] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {uploadLoading ? 'Uploading...' : 'Upload'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[12px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Uploaded documents</p>
+                      {docsLoading ? (
+                        <p className="text-[13px] text-gray-400 text-center py-6">Loading...</p>
+                      ) : documents.length === 0 ? (
+                        <p className="text-[13px] text-gray-400 text-center py-6">No documents uploaded yet</p>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {documents.map((doc, idx) => {
+                            const docLabel2 = doc.label ?? doc.docType ?? 'Document';
+                            const docFileName = doc.fileName ?? doc.originalName ?? '';
+                            const docUrl = doc.url ?? '';
+                            const docFilePath = doc.filePath ?? '';
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-[13px] font-medium text-[#1a3a5c]">{docLabel2}</span>
+                                  <span className="text-[11px] text-gray-400">{docFileName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={docUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[11px] text-[#185FA5] hover:underline"
+                                  >
+                                    View
+                                  </a>
+                                  <button
+                                    onClick={() => handleDocDelete(docFilePath)}
+                                    className="text-[11px] text-red-500 hover:underline"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
 
               </div>
             </div>

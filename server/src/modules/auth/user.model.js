@@ -182,10 +182,17 @@ const userSchema = new mongoose.Schema(
     // Documents
     documents: [
       {
-        url: String,
-        originalName: String,
-        type: String,
-        uploadedAt: Date,
+        label:      { type: String },
+        docType:    { type: String },
+        url:        { type: String },
+        filePath:   { type: String },
+        fileName:   { type: String },
+        fileSize:   { type: Number },
+        mimeType:   { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+        // legacy fields kept for backward compat
+        originalName: { type: String },
+        type:         { type: String },
       },
     ],
 

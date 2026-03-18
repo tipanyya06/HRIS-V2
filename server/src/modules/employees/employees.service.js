@@ -1,6 +1,7 @@
 import User from '../auth/user.model.js';
 import { encrypt, decrypt } from '../../utils/encrypt.js';
 import { logger } from '../../utils/logger.js';
+import { getSupabaseClient } from '../../config/supabase.js';
 
 const createError = (status, message) => {
   const err = new Error(message);
@@ -397,6 +398,81 @@ export const updateEmployeeStatus = async (employeeId, newStatus, adminId, reaso
     };
   } catch (error) {
     logger.error(`updateEmployeeStatus error: ${error.message}`);
+    throw error;
+  }
+};
+
+// ─── Document Management ────────────────────────────────────────────────────
+
+export const uploadEmployeeDocument = async (employeeId, file, docType, label = '') => {
+  try {
+    const employee = await User.findOne({ _id: employeeId, role: 'employee' });
+    if (!employee) throw createError(404, 'Employee not found');
+
+    const timestamp = Date.now();
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${employeeId}/${docType}/${timestamp}-${safeName}`;
+
+    const supabase = getSupabaseClient();
+    const { error: uploadError } = await supabase.storage
+      .from('employee-docs')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) throw createError(500, `Upload failed: ${uploadError.message}`);
+
+    const { data: urlData } = supabase.storage.from('employee-docs').getPublicUrl(filePath);
+    const documentUrl = urlData.publicUrl;
+
+    const docRecord = {
+      label:      label || docType,
+      docType,
+      url:        documentUrl,
+      filePath,
+      fileName:   file.originalname,
+      fileSize:   file.size,
+      mimeType:   file.mimetype,
+      uploadedAt: new Date(),
+    };
+
+    await User.findByIdAndUpdate(employeeId, { $push: { documents: docRecord } });
+    logger.info(`Document uploaded for employee ${employeeId}: ${docType} — ${file.originalname}`);
+    return docRecord;
+  } catch (error) {
+    logger.error(`uploadEmployeeDocument error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const deleteEmployeeDocument = async (employeeId, filePath) => {
+  try {
+    const employee = await User.findOne({ _id: employeeId, role: 'employee' });
+    if (!employee) throw createError(404, 'Employee not found');
+
+    const supabase = getSupabaseClient();
+    const { error: deleteError } = await supabase.storage.from('employee-docs').remove([filePath]);
+    if (deleteError) logger.warn(`Supabase delete warning for ${filePath}: ${deleteError.message}`);
+
+    await User.findByIdAndUpdate(employeeId, { $pull: { documents: { filePath } } });
+    logger.info(`Document deleted for employee ${employeeId}: ${filePath}`);
+    return { deleted: true, filePath };
+  } catch (error) {
+    logger.error(`deleteEmployeeDocument error: ${error.message}`);
+    throw error;
+  }
+};
+
+export const getEmployeeDocuments = async (employeeId) => {
+  try {
+    const employee = await User.findOne({ _id: employeeId, role: 'employee' })
+      .select('documents personalInfo.fullName email')
+      .lean();
+    if (!employee) throw createError(404, 'Employee not found');
+    return { employeeId, documents: employee.documents ?? [] };
+  } catch (error) {
+    logger.error(`getEmployeeDocuments error: ${error.message}`);
     throw error;
   }
 };
