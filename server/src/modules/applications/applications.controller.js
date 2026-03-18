@@ -398,3 +398,23 @@ export const getMyApplicationsController = async (req, res, next) => {
     next(err);
   }
 };
+
+// ---------------------------------------------------------------------------
+// HIRE FLOW
+// ---------------------------------------------------------------------------
+import { hireApplicant } from './applications.service.js';
+
+export const hireApplicantController = async (req, res, next) => {
+  try {
+    const { id } = req.params;       // applicantId
+    const adminId = req.user.id;     // always from JWT, never body
+    const result = await hireApplicant(id, adminId);
+    res.status(200).json({
+      success: true,
+      message: 'Applicant successfully hired',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

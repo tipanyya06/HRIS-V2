@@ -191,6 +191,11 @@ const userSchema = new mongoose.Schema(
 
     // Saved Jobs
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
+
+    // Hire flow fields
+    resumeUrl:        { type: String, default: null },
+    applicantId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Applicant', default: null },
+    onboardingStatus: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' },
   },
   { timestamps: true }
 );

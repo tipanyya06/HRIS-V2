@@ -34,6 +34,14 @@ router.get(
   applicationController.getApplicationsByStageController
 );
 
+// HIRE — must be registered BEFORE /:id to prevent Express treating 'hire' as an ObjectId
+router.patch(
+  '/:id/hire',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.hireApplicantController
+);
+
 router.get(
   '/:id',
   verifyToken,

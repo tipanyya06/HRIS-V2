@@ -170,6 +170,32 @@ export const updateStage = async (
       throw createError(404, 'Application not found');
     }
 
+    // -- STAGE ORDER ENFORCEMENT -----------------------------------------------
+    // Stages must progress in order: applied → screening → interview → offer → hired
+    // Rejected is allowed from any stage.
+    // Moving backwards is not allowed (e.g. offer → screening).
+    // Skipping stages is not allowed (e.g. applied → hired).
+    // --------------------------------------------------------------------------
+    const STAGE_ORDER = ['applied', 'screening', 'interview', 'offer', 'hired'];
+    const currentIdx = STAGE_ORDER.indexOf(applicant.stage);
+    const newIdx = STAGE_ORDER.indexOf(newStage);
+
+    if (newStage !== 'rejected' && newIdx !== -1 && currentIdx !== -1) {
+      if (newIdx < currentIdx) {
+        throw createError(
+          400,
+          `Cannot move backwards from "${applicant.stage}" to "${newStage}". Stage progression must go forward.`
+        );
+      }
+      if (newIdx > currentIdx + 1) {
+        const required = STAGE_ORDER.slice(currentIdx + 1, newIdx).join(' → ');
+        throw createError(
+          400,
+          `Cannot skip stages. Must pass through: ${required} before reaching "${newStage}".`
+        );
+      }
+    }
+
     // Add to stage history
     applicant.stageHistory.push({
       stage: newStage,
@@ -246,6 +272,29 @@ export const updateStage = async (
 
     // If hired, mark as employee and remove TTL
     if (newStage === 'hired') {
+      // Pre-employment gate — mirrors hireApplicant() validation
+      const linkedUser = await User.findOne({ email: applicant.email });
+      if (!linkedUser)
+        throw createError(
+          404,
+          'No user account found for this applicant. Applicant must have registered before hiring.'
+        );
+
+      const preEmp = await PreEmployment.findOne({ userId: linkedUser._id }).lean();
+      if (!preEmp)
+        throw createError(
+          400,
+          'Pre-employment checklist not found. Applicant must complete pre-employment requirements before hiring.'
+        );
+
+      if (preEmp.overallStatus !== 'approved') {
+        const pending = (preEmp.items || [])
+          .filter((item) => item.required && item.status !== 'approved')
+          .map((item) => item.label);
+        const detail = pending.length ? `: ${pending.join(', ')}` : '';
+        throw createError(400, `Pre-employment requirements not fully approved${detail}`);
+      }
+
       applicant.isEmployee = true;
       applicant.deletedAt = undefined; // Removes TTL
 
@@ -452,5 +501,145 @@ export const getMyApplications = async (userId) => {
   } catch (err) {
     logger.error(`Get my applications error: ${err.message}`);
     throw err;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// HIRE FLOW
+// ---------------------------------------------------------------------------
+import { sendWelcomeEmail } from '../../utils/email.js';
+import PreEmployment from '../preEmployment/preEmployment.model.js';
+
+export const hireApplicant = async (applicantId, adminId) => {
+  try {
+    // 1. Load applicant
+    const applicant = await Applicant.findById(applicantId);
+    if (!applicant) throw createError(404, 'Applicant not found');
+    if (applicant.isEmployee) throw createError(409, 'Applicant is already an employee');
+    if (applicant.stage !== 'offer')
+      throw createError(400, 'Applicant must be at offer stage before hiring');
+
+    // 2. Load linked User account
+    const user = await User.findOne({ email: applicant.email });
+    if (!user)
+      throw createError(
+        404,
+        'No user account found for this applicant. Applicant must have registered before hiring.'
+      );
+
+    // 3. Verify pre-employment checklist is fully approved
+    const preEmp = await PreEmployment.findOne({ userId: user._id }).lean();
+
+    if (!preEmp)
+      throw createError(400, 'Pre-employment checklist not found. Applicant must complete pre-employment requirements before hiring.');
+
+    if (preEmp.overallStatus !== 'approved') {
+      const pending = (preEmp.items || [])
+        .filter((item) => item.required && item.status !== 'approved')
+        .map((item) => item.label);
+      const detail = pending.length ? `: ${pending.join(', ')}` : '';
+      throw createError(400, `Pre-employment requirements not fully approved${detail}`);
+    }
+
+    // 4. Generate company email — firstname.lastname@madison88.com
+    const firstName = (
+      user.personalInfo?.givenName ||
+      applicant.fullName?.split(' ')[0] ||
+      'employee'
+    )
+      .toLowerCase()
+      .replace(/[^a-z]/g, '');
+
+    const lastName = (
+      user.personalInfo?.lastName ||
+      applicant.fullName?.split(' ').slice(-1)[0] ||
+      ''
+    )
+      .toLowerCase()
+      .replace(/[^a-z]/g, '');
+
+    const baseEmail = lastName
+      ? `${firstName}.${lastName}@madison88.com`
+      : `${firstName}@madison88.com`;
+
+    // 4. Handle duplicate company emails
+    let companyEmail = baseEmail;
+    let suffix = 2;
+    while (
+      await User.findOne({ 'contactInfo.companyEmail': companyEmail, _id: { $ne: user._id } })
+    ) {
+      companyEmail = baseEmail.replace('@madison88.com', `${suffix}@madison88.com`);
+      suffix++;
+      if (suffix > 99) throw createError(500, 'Could not generate unique company email');
+    }
+
+    // 5. Load job for department + positionTitle
+    const job = applicant.jobId ? await Job.findById(applicant.jobId) : null;
+
+    // 6. Update User → promote to employee
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        role: 'employee',
+        isActive: true,
+        isVerified: true,
+        'contactInfo.companyEmail': companyEmail,
+        'contactInfo.mainContactNo': applicant.phone ?? '',
+        department: job?.department ?? applicant.department ?? '',
+        positionTitle: job?.title ?? '',
+        dateOfEmployment: new Date(),
+        onboardingStatus: 'pending',
+        source: applicant.source ?? 'Direct',
+        resumeUrl: applicant.resumeUrl ?? null,
+        applicantId: applicant._id,
+      },
+      { new: true }
+    );
+
+    // 7. Update Applicant → mark as employee, remove TTL
+    await Applicant.findByIdAndUpdate(applicant._id, {
+      isEmployee: true,
+      stage: 'hired',
+      $unset: { deletedAt: '' },
+      $push: {
+        stageHistory: {
+          stage: 'hired',
+          changedAt: new Date(),
+          changedBy: adminId,
+          notes: 'Hired — promoted to employee',
+        },
+      },
+    });
+
+    // 8. Decrement job slots if applicable
+    if (job && job.slots > 0) {
+      await Job.findByIdAndUpdate(job._id, { $inc: { slots: -1 } });
+      const updatedJob = await Job.findById(job._id);
+      if (updatedJob.slots <= 0) {
+        await Job.findByIdAndUpdate(job._id, { status: 'closed', closedAt: new Date() });
+        logger.info(`Job ${job._id} auto-closed — all slots filled`);
+      }
+    }
+
+    // 9. Send welcome email — fire and forget
+    const updatedUser = await User.findById(user._id);
+    sendWelcomeEmail(updatedUser, companyEmail).catch((err) => {
+      logger.error(`Welcome email failed for ${user.email}: ${err.message}`);
+    });
+
+    // 10. Log hire event
+    logger.info(
+      `Applicant ${applicant._id} hired as employee ${user._id} by admin ${adminId}. Company email: ${companyEmail}`
+    );
+
+    return {
+      userId: user._id,
+      companyEmail,
+      department: job?.department ?? '',
+      positionTitle: job?.title ?? '',
+    };
+  } catch (error) {
+    logger.error(`hireApplicant error: ${error.message}`);
+    throw error;
   }
 };
