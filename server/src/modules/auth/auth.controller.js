@@ -1,5 +1,6 @@
 import { signup, login, getProfile, logout, registerApplicant, saveJob, unsaveJob, getSavedJobs } from './auth.service.js';
 import { logger } from '../../utils/logger.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 
 /**
  * POST /api/auth/signup
@@ -51,6 +52,16 @@ export const loginController = async (req, res, next) => {
     }
 
     const result = await login(email, password);
+    try {
+      await logActivity(
+        req,
+        `User logged in: ${result.user?.email}`,
+        'auth',
+        result.user?.id
+      );
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -79,6 +90,11 @@ export const logoutController = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const result = await logout(userId);
+    try {
+      await logActivity(req, 'User logged out', 'auth', req.user?.id);
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
     res.status(200).json(result);
   } catch (error) {
     next(error);

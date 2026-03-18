@@ -1,4 +1,5 @@
 import * as jobService from './job.service.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 
 // Smart GET /api/jobs — Returns all jobs if admin, active jobs if public
 export const getSmartJobsController = async (req, res, next) => {
@@ -49,6 +50,11 @@ export const createJobController = async (req, res, next) => {
     };
 
     const job = await jobService.createJob(jobData);
+    try {
+      await logActivity(req, `Job created: ${job.title}`, 'job', job._id);
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
 
     res.status(201).json({
       success: true,
@@ -122,6 +128,11 @@ export const updateJobController = async (req, res, next) => {
     const updateData = req.body;
 
     const job = await jobService.updateJob(id, updateData);
+    try {
+      await logActivity(req, `Job updated: ${job.title}`, 'job', job._id);
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
 
     res.status(200).json({
       success: true,
@@ -142,6 +153,11 @@ export const deleteJobController = async (req, res, next) => {
     const { id } = req.params;
 
     await jobService.deleteJob(id);
+    try {
+      await logActivity(req, `Job deleted: ${id}`, 'job', id);
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
 
     res.status(200).json({
       success: true,
@@ -166,6 +182,16 @@ export const updateJobStatusController = async (req, res, next) => {
     }
 
     const job = await jobService.updateJobStatus(id, status);
+    try {
+      await logActivity(
+        req,
+        `Job status changed to ${status}: ${job.title}`,
+        'job',
+        job._id
+      );
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
 
     res.status(200).json({
       success: true,

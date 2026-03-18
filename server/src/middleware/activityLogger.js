@@ -1,4 +1,5 @@
 import Log from '../modules/logs/log.model.js';
+import { logger } from '../utils/logger.js';
 
 export const logActivity = async (req, details, resource, resourceId = null) => {
   try {
@@ -28,6 +29,6 @@ export const logActivity = async (req, details, resource, resourceId = null) => 
     });
   } catch (err) {
     // Never throw - logging must never crash the main request
-    console.error('Activity log error:', err.message);
+    logger.error(`Activity log error: ${err.message}`);
   }
 };

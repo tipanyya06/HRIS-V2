@@ -10,6 +10,7 @@ import {
   PageHeader,
   Select,
   Input,
+  StatusBadge,
 } from '../../components/ui';
 
 // Stage definitions
@@ -270,13 +271,7 @@ export default function Applicants() {
       key: 'stage',
       label: 'Stage',
       render: (row) => (
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-            STAGE_COLORS[row.stage] || 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {row.stage?.charAt(0).toUpperCase() + row.stage?.slice(1)}
-        </span>
+        <StatusBadge status={row.stage} />
       ),
     },
     {
@@ -327,6 +322,8 @@ export default function Applicants() {
     },
   ];
 
+  const pagination = { page, limit: 20, total: applicants.length, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 };
+
   return (
     <div className="w-full px-6 py-5 flex flex-col gap-4">
       {/* PAGE HEADER */}
@@ -351,26 +348,20 @@ export default function Applicants() {
       </div>
 
       {/* FILTERS BAR */}
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
-        {/* Search */}
+      <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3 flex-wrap mb-4">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Filters</span>
         <input
           type="text"
           placeholder="Search name or email..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 w-64"
+          onChange={(e) => { setSearch(e.target.value); }}
+          className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5] min-w-[200px]"
         />
 
-        {/* Stage Filter */}
         <select
           value={filterStage}
-          onChange={(e) => {
-            setFilterStage(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+          onChange={(e) => { setFilterStage(e.target.value); setPage(1); }}
+          className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
         >
           <option value="all">All Stages</option>
           <option value="applied">Applied</option>
@@ -381,14 +372,10 @@ export default function Applicants() {
           <option value="rejected">Rejected</option>
         </select>
 
-        {/* Job Filter */}
         <select
           value={filterJobId}
-          onChange={(e) => {
-            setFilterJobId(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+          onChange={(e) => { setFilterJobId(e.target.value); setPage(1); }}
+          className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
         >
           <option value="all">All Jobs</option>
           {jobs.map((job) => (
@@ -397,6 +384,13 @@ export default function Applicants() {
             </option>
           ))}
         </select>
+
+        <button
+          onClick={() => { setSearch(''); setFilterStage('all'); setFilterJobId('all'); setPage(1); }}
+          className="text-[12px] text-[#185FA5] border border-gray-200 rounded-md px-3 h-[30px] bg-white hover:bg-gray-50 whitespace-nowrap"
+        >
+          Reset
+        </button>
       </div>
 
       {/* APPLICANTS TABLE */}
@@ -408,29 +402,46 @@ export default function Applicants() {
       />
 
       {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            isDisabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="px-3 py-1 text-sm text-gray-600">
-            Page {page} of {totalPages}
+      {pagination ? (
+        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 mt-4">
+          <span className="text-[12px] text-gray-500">
+            Showing{' '}
+            <span className="font-medium text-gray-700">{((pagination.page - 1) * pagination.limit) + 1}</span>
+            {' '}–{' '}
+            <span className="font-medium text-gray-700">{Math.min(pagination.page * pagination.limit, pagination.total)}</span>
+            {' '}of{' '}
+            <span className="font-medium text-gray-700">{pagination.total}</span>
+            {' '}records
           </span>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            isDisabled={page === totalPages}
-          >
-            Next
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1,p-1))}
+              disabled={!pagination.hasPrevPage}
+              className="h-[30px] px-3 border border-gray-200 rounded-md text-[12px] text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Prev
+            </button>
+
+            {Array.from({length:pagination.totalPages},(_,i)=>i+1)
+              .filter(p=>p===1||p===pagination.totalPages||Math.abs(p-pagination.page)<=1)
+              .reduce((acc,p,idx,arr)=>{ if(idx>0&&p-arr[idx-1]>1) acc.push('...'); acc.push(p); return acc },[])
+              .map((p,idx)=> p==='...' ? (
+                <span key={`e-${idx}`} className="text-[12px] text-gray-400 px-1">…</span>
+              ) : (
+                <button key={p} onClick={()=>setPage(p)} className={`h-[30px] w-[30px] rounded-md text-[12px] border transition-colors ${pagination.page===p ? 'bg-[#185FA5] text-white border-[#185FA5]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>{p}</button>
+              ))}
+
+            <button
+              onClick={()=>setPage(p=>Math.min(pagination.totalPages,p+1))}
+              disabled={!pagination.hasNextPage}
+              className="h-[30px] px-3 border border-gray-200 rounded-md text-[12px] text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          </div>
         </div>
-      )}
+      ) : null}
 
       {/* TOAST */}
       {toast && (
@@ -504,15 +515,7 @@ export default function Applicants() {
                 <p className="text-xs text-gray-500 uppercase tracking-wide">
                   Current Stage
                 </p>
-                <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    STAGE_COLORS[selectedApplicant.stage] ||
-                    'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {selectedApplicant.stage?.charAt(0).toUpperCase() +
-                    selectedApplicant.stage?.slice(1)}
-                </span>
+                <StatusBadge status={selectedApplicant.stage} />
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">

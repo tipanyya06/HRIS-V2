@@ -133,6 +133,12 @@ export const updateEmployeeStatusController = async (req, res, next) => {
       return res.status(400).json({ error: 'status is required' });
 
     const result = await employeeService.updateEmployeeStatus(id, status, adminId, reason);
+    await logActivity(
+      req,
+      `Employee status changed to ${status}: ${id}`,
+      'employee',
+      id
+    );
 
     res.status(200).json({
       success: true,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../lib/api';
-import { LoadingSpinner, Button, Badge } from '../../components/ui';
+import { LoadingSpinner, Button, Badge, StatusBadge } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -14,6 +14,8 @@ export default function Jobs() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,18 +38,22 @@ export default function Jobs() {
   // Filter state
   const [tab, setTab] = useState('all');
 
-  // Fetch jobs on mount
+  // Fetch jobs on mount and when page changes
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [page]);
 
   // FETCH DATA
   const fetchJobs = async () => {
     try {
       setIsLoading(true);
       setError('');
-      const response = await api.get('/jobs');
-      setJobs(response.data?.data || []);
+      const response = await api.get(`/jobs?page=${page}&limit=10`);
+      const list = response.data?.data || response.data || [];
+      setJobs(list);
+      const total = response.data?.total || list.length;
+      const totalPages = response.data?.totalPages || Math.ceil(total / 10);
+      setPagination({ page, limit: 10, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load jobs');
       setJobs([]);
@@ -224,10 +230,7 @@ export default function Jobs() {
       key: 'status',
       label: 'Status',
       render: (job) => (
-        <Badge
-          status={job.status}
-          label={job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-        />
+        <StatusBadge status={job.status} />
       ),
     },
     {

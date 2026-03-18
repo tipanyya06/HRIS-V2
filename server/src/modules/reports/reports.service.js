@@ -152,8 +152,8 @@ export const getDashboardStats = async () => {
 
     let recentActivity = [];
     try {
-      const ActivityLog = mongoose.models.ActivityLog || mongoose.model('ActivityLog');
-      recentActivity = await ActivityLog.find({})
+      const Log = mongoose.models.Log || mongoose.model('Log');
+      recentActivity = await Log.find({})
         .sort({ createdAt: -1 })
         .limit(10)
         .lean();

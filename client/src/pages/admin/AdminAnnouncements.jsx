@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Edit2, Trash2, X } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { LoadingSpinner, Button, Badge, Modal, Table, Toast } from '../../components/ui';
+import { LoadingSpinner, Button, Badge, Modal, Table, Toast, StatusBadge } from '../../components/ui';
 
 const PRIORITY_COLORS = {
   urgent: 'bg-red-100 text-red-800',
@@ -150,11 +150,7 @@ export default function Announcements() {
       key: 'priority',
       label: 'Priority',
       render: (row) => (
-        <Badge
-          className={`${PRIORITY_COLORS[row.priority] || PRIORITY_COLORS.normal}`}
-        >
-          {row.priority.charAt(0).toUpperCase() + row.priority.slice(1)}
-        </Badge>
+        <StatusBadge status={row.priority} />
       ),
     },
     {
@@ -166,9 +162,7 @@ export default function Announcements() {
       key: 'isActive',
       label: 'Status',
       render: (row) => (
-        <Badge className={row.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}>
-          {row.isActive ? 'Active' : 'Inactive'}
-        </Badge>
+        <StatusBadge status={row.isActive ? 'active' : 'inactive'} />
       ),
     },
     {
@@ -258,7 +252,7 @@ export default function Announcements() {
               {announcements.map((announcement, idx) => (
                 <tr
                   key={announcement._id}
-                  className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50 border-b border-gray-200'}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
                 >
                   {columns.map((col) => (
                     <td key={col.key} className="px-6 py-4 text-[13px] text-gray-700">
@@ -294,7 +288,7 @@ export default function Announcements() {
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
                 placeholder="Announcement title"
               />
             </div>
@@ -308,7 +302,7 @@ export default function Announcements() {
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
                 placeholder="Announcement content"
               />
             </div>
@@ -321,7 +315,7 @@ export default function Announcements() {
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>

@@ -1,6 +1,7 @@
 import * as applicationService from './applications.service.js';
 import { logger } from '../../utils/logger.js';
 import User from '../auth/user.model.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 import {
   createNotification,
   createBulkNotifications,
@@ -293,6 +294,16 @@ export const updateStageController = async (req, res, next) => {
       `${req.user.email}`,
       notes || ''
     );
+    try {
+      await logActivity(
+        req,
+        `Stage updated to ${newStage}: ${applicant.fullName}`,
+        'applicant',
+        id
+      );
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
 
     // Notify applicant of stage change (silent fail)
     try {
@@ -409,6 +420,16 @@ export const hireApplicantController = async (req, res, next) => {
     const { id } = req.params;       // applicantId
     const adminId = req.user.id;     // always from JWT, never body
     const result = await hireApplicant(id, adminId);
+    try {
+      await logActivity(
+        req,
+        `Applicant hired: ${result.companyEmail}`,
+        'applicant',
+        id
+      );
+    } catch (logErr) {
+      // Never allow logging to break the request
+    }
     res.status(200).json({
       success: true,
       message: 'Applicant successfully hired',
