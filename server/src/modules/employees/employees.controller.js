@@ -9,22 +9,8 @@ const createError = (status, message) => {
 
 export const getEmployeesController = async (req, res, next) => {
   try {
-    const { search, department, status, page = 1, limit = 20 } = req.query;
-
-    const filters = {};
-    if (search) filters.search = search;
-    if (department) filters.department = department;
-    if (status) filters.status = status;
-
-    const result = await employeeService.getEmployees(filters, {
-      page,
-      limit,
-    });
-
-    res.status(200).json({
-      success: true,
-      ...result,
-    });
+    const data = await employeeService.getEmployees(req.query);
+    res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }

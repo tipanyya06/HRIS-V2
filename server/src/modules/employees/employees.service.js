@@ -65,51 +65,155 @@ const decryptSensitiveFields = (employeeDoc) => {
   return employee;
 };
 
-export const getEmployees = async (filters = {}, pagination = {}) => {
+export const getEmployees = async (query = {}) => {
   try {
-    const { search, department, status } = filters;
-    const page = parseInt(pagination.page, 10) || 1;
-    const limit = parseInt(pagination.limit, 10) || 20;
+    const {
+      search = '',
+      department = '',
+      status = '',
+      employmentType = '',
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
 
-    const query = {
+    // Build filter
+    const filter = {
       role: 'employee',
     };
 
-    if (department) {
-      query.department = department;
+    if (department && department !== 'All Departments') {
+      filter.department = department;
     }
 
-    if (status === 'active') {
-      query.isActive = true;
-    } else if (status === 'inactive') {
-      query.isActive = false;
+    if (status && status !== 'All Statuses') {
+      const lowerStatus = String(status).toLowerCase();
+      if (lowerStatus === 'active') {
+        filter.isActive = true;
+      } else if (lowerStatus === 'inactive') {
+        filter.isActive = false;
+      } else if (lowerStatus === 'terminated') {
+        filter.terminatedAt = { $exists: true, $ne: null };
+      } else {
+        filter.status = status;
+      }
     }
 
-    if (search) {
-      query.$or = [
-        { email: { $regex: search, $options: 'i' } },
-        { 'personalInfo.givenName': { $regex: search, $options: 'i' } },
-        { 'personalInfo.lastName': { $regex: search, $options: 'i' } },
-        { 'name.given_name': { $regex: search, $options: 'i' } },
-        { 'name.family_name': { $regex: search, $options: 'i' } },
+    if (employmentType && employmentType !== 'All Types') {
+      filter.$or = [
+        { employmentType },
+        { classification: employmentType },
       ];
     }
 
-    const total = await User.countDocuments(query);
-    const data = await User.find(query)
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    // Text search - name or email
+    if (search && search.trim() !== '') {
+      const searchTerm = search.trim();
+      const textFilter = [
+        { 'personalInfo.firstName': { $regex: searchTerm, $options: 'i' } },
+        { 'personalInfo.lastName': { $regex: searchTerm, $options: 'i' } },
+        { 'personalInfo.fullName': { $regex: searchTerm, $options: 'i' } },
+        { 'personalInfo.givenName': { $regex: searchTerm, $options: 'i' } },
+        { email: { $regex: searchTerm, $options: 'i' } },
+        { 'contactInfo.companyEmail': { $regex: searchTerm, $options: 'i' } },
+        { department: { $regex: searchTerm, $options: 'i' } },
+        { positionTitle: { $regex: searchTerm, $options: 'i' } },
+      ];
+
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: textFilter }];
+        delete filter.$or;
+      } else {
+        filter.$or = textFilter;
+      }
+    }
+
+    // Pagination
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Sort
+    const allowedSortFields = [
+      'createdAt',
+      'personalInfo.lastName',
+      'personalInfo.firstName',
+      'personalInfo.givenName',
+      'department',
+      'positionTitle',
+      'dateOfEmployment',
+      'status',
+    ];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const safeSortOrder = sortOrder === 'asc' ? 1 : -1;
+
+    const [employeesRaw, total] = await Promise.all([
+      User.find(filter)
+        .select(
+          '_id personalInfo.firstName personalInfo.lastName personalInfo.fullName personalInfo.givenName ' +
+          'email contactInfo.companyEmail companyEmail department positionTitle employmentType classification ' +
+          'status isActive isVerified profilePicUrl avatarUrl dateOfEmployment createdAt terminatedAt'
+        )
+        // Never select password, govIds, or payroll in list view
+        .sort({ [safeSortBy]: safeSortOrder })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+
+    // Normalize row payload for frontend compatibility
+    const employees = employeesRaw.map((emp) => {
+      const firstName = emp?.personalInfo?.firstName || emp?.personalInfo?.givenName || '';
+      const lastName = emp?.personalInfo?.lastName || '';
+      const fullName = emp?.personalInfo?.fullName || `${firstName} ${lastName}`.trim();
+
+      let normalizedStatus = emp?.status;
+      if (!normalizedStatus) {
+        if (emp?.terminatedAt) normalizedStatus = 'terminated';
+        else normalizedStatus = emp?.isActive ? 'active' : 'inactive';
+      }
+
+      return {
+        ...emp,
+        personalInfo: {
+          ...emp.personalInfo,
+          firstName,
+          lastName,
+          fullName,
+        },
+        companyEmail: emp?.contactInfo?.companyEmail || emp?.companyEmail || null,
+        avatarUrl: emp?.avatarUrl || emp?.profilePicUrl || null,
+        employmentType: emp?.employmentType || emp?.classification || null,
+        status: normalizedStatus,
+      };
+    });
+
+    // Get unique departments for filter dropdown
+    const departments = await User.distinct('department', {
+      role: 'employee',
+      department: { $exists: true, $nin: [null, ''] },
+    });
+
+    const totalPages = Math.ceil(total / limitNum);
 
     return {
-      data,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit) || 1,
+      employees,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+      },
+      meta: {
+        departments: departments.sort(),
+      },
     };
   } catch (error) {
-    logger.error(`Get employees error: ${error.message}`);
+    logger.error(`getEmployees error: ${error.message}`);
     throw error;
   }
 };
