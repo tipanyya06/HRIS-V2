@@ -11,6 +11,7 @@ import {
   getTrainingCompletionTrend,
   getCustomReportData,
   getPESOReportData,
+  getGlobalKpi,
 } from './reports.service.js';
 import ExcelJS from 'exceljs';
 import {
@@ -21,6 +22,20 @@ import {
 } from './reports.controller.js';
 
 const router = express.Router();
+
+router.get(
+  '/global-kpi',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  async (req, res, next) => {
+    try {
+      const data = await getGlobalKpi();
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // Dashboard stats (existing)
 router.get(

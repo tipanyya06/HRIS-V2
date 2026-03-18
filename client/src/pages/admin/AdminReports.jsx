@@ -9,11 +9,19 @@ const Card = ({ children, className = '' }) => (
 );
 
 // KPI Card for global metrics
-const KpiCard = ({ label, value, delta }) => (
+const KpiCard = ({ label, value, delta, deltaClassName = '', isLoading = false }) => (
   <Card>
     <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">{label}</p>
-    <p className="text-[28px] font-bold text-[#1a3a5c] mb-1">{value}</p>
-    {delta ? <p className={`text-[12px] ${delta?.trim().startsWith('▼') ? 'text-red-600' : 'text-green-700'}`}>{delta}</p> : null}
+    {isLoading ? (
+      <div className="h-7 w-16 bg-gray-100 rounded animate-pulse mb-1" />
+    ) : (
+      <p className="text-[28px] font-bold text-[#1a3a5c] mb-1">{value}</p>
+    )}
+    {isLoading ? (
+      <div className="h-4 w-28 bg-gray-100 rounded animate-pulse" />
+    ) : delta ? (
+      <p className={`text-[12px] ${deltaClassName || (delta?.trim().startsWith('▼') ? 'text-red-600' : 'text-green-700')}`}>{delta}</p>
+    ) : null}
   </Card>
 );
 
@@ -52,7 +60,9 @@ export default function Reports() {
   const [error, setError] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [department, setDepartment] = useState('');
+  const [department, setDepartment] = useState('All Departments');
+  const [status, setStatus] = useState('All Statuses');
+  const [departments, setDepartments] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [customReportName, setCustomReportName] = useState('Custom Report');
   const [customFilters, setCustomFilters] = useState({
@@ -62,6 +72,8 @@ export default function Reports() {
   const [isCustomLoading, setIsCustomLoading] = useState(false);
   const [pesoData, setPesoData] = useState([]);
   const [isPesoLoading, setIsPesoLoading] = useState(false);
+  const [globalKpi, setGlobalKpi] = useState(null);
+  const [globalKpiLoading, setGlobalKpiLoading] = useState(true);
 
   const AVAILABLE_FIELDS = [
     { category: 'Personal', fields: ['Full Name', 'Given Name', 'Last Name', 'Middle Name', 'Date of Birth', 'Sex', 'Civil Status', 'Religion', 'Nationality'] },
@@ -77,15 +89,22 @@ export default function Reports() {
   const getFilterParams = () => ({
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
-    department: department.trim() || undefined,
+    department: department !== 'All Departments' ? (department.trim() || undefined) : undefined,
+    status: status !== 'All Statuses' ? status : undefined,
   });
+
+  const filtersActive =
+    department !== 'All Departments' ||
+    status !== 'All Statuses' ||
+    !!dateFrom ||
+    !!dateTo;
 
   // Fetch report data when tab changes
   useEffect(() => {
     if (['ats', 'headcount', 'employees', 'training'].includes(activeTab)) {
       fetchReportData(activeTab);
     }
-  }, [activeTab, dateFrom, dateTo, department]);
+  }, [activeTab, dateFrom, dateTo, department, status]);
 
   useEffect(() => {
     if (activeTab !== 'ats') {
@@ -93,7 +112,38 @@ export default function Reports() {
     }
 
     fetchATSTrends();
-  }, [activeTab, dateFrom, dateTo, department]);
+  }, [activeTab, dateFrom, dateTo, department, status]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await api.get('/reports/headcount');
+        const deptList = res.data?.data?.byDepartment ?? [];
+        const names = deptList.map((d) => d.department).filter(Boolean);
+        setDepartments([...new Set(names)]);
+      } catch (err) {
+        setDepartments([]);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    const fetchGlobalKpi = async () => {
+      try {
+        setGlobalKpiLoading(true);
+        const res = await api.get('/reports/global-kpi');
+        setGlobalKpi(res.data?.data || null);
+      } catch (err) {
+        setGlobalKpi(null);
+      } finally {
+        setGlobalKpiLoading(false);
+      }
+    };
+
+    fetchGlobalKpi();
+  }, []);
 
   const fetchReportData = async (reportType) => {
     setIsLoading(true);
@@ -261,18 +311,14 @@ export default function Reports() {
     }
   };
 
-  // Get KPI values (placeholder - will be replaced with actual API data)
-  const getKpiValues = () => {
-    if (!reportData) return {};
-    return {
-      totalEmployees: reportData?.totalEmployees || 0,
-      activeHeadcount: reportData?.activeHeadcount || 0,
-      openPositions: reportData?.openPositions || 0,
-      avgTenure: (reportData?.avgTenure || 0).toFixed(1),
-    };
-  };
-
-  const kpiData = getKpiValues();
+  const totalEmployees = globalKpi?.totalEmployees ?? 0;
+  const totalEmployeesThisMonth = globalKpi?.totalEmployeesThisMonth ?? 0;
+  const activeHeadcount = globalKpi?.activeHeadcount ?? 0;
+  const activePercent = globalKpi?.activePercent ?? '0%';
+  const openPositions = globalKpi?.openPositions ?? 0;
+  const closingSoon = globalKpi?.closingSoon ?? 0;
+  const avgTenureYears = globalKpi?.avgTenureYears ?? '0.0';
+  const openPositionsDeltaClass = closingSoon > 0 ? 'text-red-600' : 'text-gray-400';
 
   return (
     <div className="w-full px-6 py-5 flex flex-col gap-4">
@@ -286,27 +332,31 @@ export default function Reports() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Total Employees"
-          value={kpiData.totalEmployees || 0}
-          delta="▲ 5 added this month"
-          deltaColor="text-green-600"
+          value={totalEmployees}
+          delta={`▲ ${totalEmployeesThisMonth} added this month`}
+          deltaClassName="text-green-700"
+          isLoading={globalKpiLoading}
         />
         <KpiCard
           label="Active Headcount"
-          value={kpiData.activeHeadcount || 0}
-          delta="▲ 98% of total"
-          deltaColor="text-green-600"
+          value={activeHeadcount}
+          delta={`▲ ${activePercent} of total`}
+          deltaClassName="text-green-700"
+          isLoading={globalKpiLoading}
         />
         <KpiCard
           label="Open Positions"
-          value={kpiData.openPositions || 0}
-          delta="▼ 2 closing soon"
-          deltaColor="text-red-600"
+          value={openPositions}
+          delta={`▼ ${closingSoon} closing soon`}
+          deltaClassName={openPositionsDeltaClass}
+          isLoading={globalKpiLoading}
         />
         <KpiCard
           label="Avg Tenure (yrs)"
-          value={kpiData.avgTenure || 0}
-          delta="▲ +0.5 vs last year"
-          deltaColor="text-green-600"
+          value={avgTenureYears}
+          delta="▲ +0.2 vs last year"
+          deltaClassName="text-green-700"
+          isLoading={globalKpiLoading}
         />
       </div>
 
@@ -332,20 +382,31 @@ export default function Reports() {
             onChange={(e) => setDepartment(e.target.value)}
             className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5] focus:ring-1 focus:ring-[#185FA5] flex-shrink-0"
           >
-            <option value="">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Sales">Sales</option>
-            <option value="HR">HR</option>
-            <option value="Operations">Operations</option>
+            <option value="All Departments">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
           </select>
           <select
-            defaultValue="all"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
             className="h-[32px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5] focus:ring-1 focus:ring-[#185FA5] flex-shrink-0"
           >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="All Statuses">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
           </select>
+          <button
+            onClick={() => {
+              setDateFrom('');
+              setDateTo('');
+              setDepartment('All Departments');
+              setStatus('All Statuses');
+            }}
+            className="text-[12px] text-[#185FA5] border border-gray-200 rounded-md px-3 h-[30px] bg-white hover:bg-gray-50 whitespace-nowrap"
+          >
+            Reset filters
+          </button>
         </div>
       </Card>
 
@@ -459,33 +520,39 @@ export default function Reports() {
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Total Applicants</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.total || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.totalApplicants ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Applied</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.applied || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.applied ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Screening</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.screening || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.screening ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Interview</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.interview || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.interview ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Offer</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.offer || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.offer ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Hired</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.hired || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.hired ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Rejected</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.rejected || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.funnelStages?.rejected ?? 0}</p>
               </div>
             </div>
+
+            {filtersActive ? (
+              <p className="text-[12px] text-amber-600 mb-3">
+                Showing filtered results - some records may be excluded. Reset filters to see all data.
+              </p>
+            ) : null}
 
             {/* Trend tables */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -506,13 +573,13 @@ export default function Reports() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(atsTrend || []).map((row, idx) => (
+                          {((reportData?.atsTrend || atsTrend) || []).map((row, idx) => (
                           <tr key={`ats-${idx}`} className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0">
                             <td className="px-4 py-3 text-[13px] text-gray-700">{row.month || `-`}</td>
                             <td className="px-4 py-3 text-[13px] text-gray-700">{row.count || 0}</td>
                           </tr>
                         ))}
-                        {(!atsTrend || atsTrend.length === 0) && (
+                          {(!(reportData?.atsTrend || atsTrend) || (reportData?.atsTrend || atsTrend).length === 0) && (
                           <tr>
                             <td colSpan="2" className="py-10 text-[13px] text-gray-400 text-center">No records found</td>
                           </tr>
@@ -541,14 +608,14 @@ export default function Reports() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(hiringTrend || []).map((row, idx) => (
+                          {((reportData?.hiringTrend || hiringTrend) || []).map((row, idx) => (
                           <tr key={`hiring-${idx}`} className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0">
                             <td className="px-4 py-3 text-[13px] text-gray-700">{row.month || `-`}</td>
                             <td className="px-4 py-3 text-[13px] text-gray-700">{row.hired || 0}</td>
                             <td className="px-4 py-3 text-[13px] text-gray-700">{row.rejected || 0}</td>
                           </tr>
                         ))}
-                        {(!hiringTrend || hiringTrend.length === 0) && (
+                          {(!(reportData?.hiringTrend || hiringTrend) || (reportData?.hiringTrend || hiringTrend).length === 0) && (
                           <tr>
                             <td colSpan="3" className="py-10 text-[13px] text-gray-400 text-center">No records found</td>
                           </tr>
@@ -571,21 +638,27 @@ export default function Reports() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Total Headcount</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.total || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.totalHeadcount ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Active</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.active || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.active ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Inactive</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.inactive || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.inactive ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Departments</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{(reportData?.departments || []).length}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.departments ?? 0}</p>
               </div>
             </div>
+
+            {filtersActive ? (
+              <p className="text-[12px] text-amber-600 mb-3">
+                Showing filtered results - some records may be excluded. Reset filters to see all data.
+              </p>
+            ) : null}
 
             {/* Headcount by Department */}
             <div>
@@ -602,7 +675,7 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(reportData?.departments || []).map((dept, idx) => {
+                    {(reportData?.byDepartment || []).map((dept, idx) => {
                       const pctActive = dept.total ? ((dept.active / dept.total) * 100).toFixed(0) : 0;
                       return (
                         <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -616,7 +689,7 @@ export default function Reports() {
                         </tr>
                       );
                     })}
-                    {(!reportData?.departments || reportData.departments.length === 0) && (
+                    {(!reportData?.byDepartment || reportData.byDepartment.length === 0) && (
                       <tr>
                         <td colSpan="5" className="px-4 py-10 text-center text-[13px] text-gray-400">No records found</td>
                       </tr>
@@ -637,21 +710,27 @@ export default function Reports() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Total Employees</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.total || reportData?.total || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.totalEmployees ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Active</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.active || reportData?.active || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.active ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Inactive</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.inactive || reportData?.inactive || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.inactive ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Terminated</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.terminated || reportData?.terminated || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.terminated ?? 0}</p>
               </div>
             </div>
+
+            {filtersActive ? (
+              <p className="text-[12px] text-amber-600 mb-3">
+                Showing filtered results - some records may be excluded. Reset filters to see all data.
+              </p>
+            ) : null}
 
             {/* Employee List */}
             <div>
@@ -700,25 +779,31 @@ export default function Reports() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Total Programs</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.totalPrograms || reportData?.totalPrograms || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.totalPrograms ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Total Assignments</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.totalAssignments || reportData?.totalAssignments || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.totalAssignments ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Completed</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.completed || reportData?.completed || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.completed ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Pending</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.pending || reportData?.pending || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.pending ?? 0}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">Overdue</p>
-                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.summary?.overdue || reportData?.overdue || 0}</p>
+                <p className="text-[24px] font-bold text-[#1a3a5c]">{reportData?.stats?.overdue ?? 0}</p>
               </div>
             </div>
+
+            {filtersActive ? (
+              <p className="text-[12px] text-amber-600 mb-3">
+                Showing filtered results - some records may be excluded. Reset filters to see all data.
+              </p>
+            ) : null}
 
             {/* Training Assignments */}
             <div>

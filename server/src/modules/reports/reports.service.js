@@ -197,28 +197,44 @@ export const getDashboardStats = async () => {
 export const getATSReport = async (filters = {}) => {
   try {
     const baseFilter = buildDateRangeFilter(filters);
+    if (filters.department) baseFilter.department = filters.department;
 
+    // Stage counts
     const stageCounts = await Promise.all(
       STAGES.map(async (stage) => ({
         stage,
-        count: await Applicant.countDocuments({
-          ...baseFilter,
-          stage,
-        }),
+        count: await Applicant.countDocuments({ ...baseFilter, stage }),
       }))
     );
-
-    const total = stageCounts.reduce((sum, s) => sum + s.count, 0);
-
-    // Create object with stage keys for easier access in frontend
     const stageData = {};
     stageCounts.forEach((s) => {
       stageData[s.stage] = s.count;
     });
+    const total = stageCounts.reduce((sum, s) => sum + s.count, 0);
+    const hired = stageData.hired || 0;
+    const conversionRate = total > 0 ? `${((hired / total) * 100).toFixed(1)}%` : '0%';
+    const inPipeline =
+      (stageData.applied || 0) +
+      (stageData.screening || 0) +
+      (stageData.interview || 0) +
+      (stageData.offer || 0);
+
+    // Reuse existing trend functions
+    const [atsTrend, hiringTrend] = await Promise.all([
+      getATSTrend(filters),
+      getHiringTrend(filters),
+    ]);
 
     return {
-      ...stageData,
-      total,
+      stats: {
+        totalApplicants: total,
+        inPipeline,
+        hired,
+        conversionRate,
+      },
+      funnelStages: stageData,
+      atsTrend,
+      hiringTrend,
     };
   } catch (error) {
     logger.error(`Get ATS report error: ${error.message}`);
@@ -241,34 +257,78 @@ export const getHeadcountReport = async (filters = {}) => {
       baseMatch.department = filters.department;
     }
 
-    const headcount = await User.aggregate([
-      { $match: baseMatch },
-      {
-        $group: {
-          _id: '$department',
-          total: { $sum: 1 },
-          active: {
-            $sum: { $cond: ['$isActive', 1, 0] },
-          },
-          inactive: {
-            $sum: { $cond: ['$isActive', 0, 1] },
+    const [totalHeadcount, active, inactive, byDept, byType] = await Promise.all([
+      User.countDocuments(baseMatch),
+      User.countDocuments({ ...baseMatch, isActive: true }),
+      User.countDocuments({ ...baseMatch, isActive: false }),
+      User.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: '$department',
+            total: { $sum: 1 },
+            active: { $sum: { $cond: ['$isActive', 1, 0] } },
+            inactive: { $sum: { $cond: ['$isActive', 0, 1] } },
           },
         },
-      },
-      {
-        $project: {
-          _id: 0,
-          department: { $ifNull: ['$_id', 'Unassigned'] },
-          total: 1,
-          active: 1,
-          inactive: 1,
+        {
+          $project: {
+            _id: 0,
+            department: { $ifNull: ['$_id', 'Unassigned'] },
+            total: 1,
+            active: 1,
+            inactive: 1,
+            activePercent: {
+              $round: [
+                {
+                  $multiply: [
+                    {
+                      $cond: [
+                        { $eq: ['$total', 0] },
+                        0,
+                        { $divide: ['$active', '$total'] },
+                      ],
+                    },
+                    100,
+                  ],
+                },
+                1,
+              ],
+            },
+          },
         },
-      },
-      { $sort: { department: 1 } },
+        { $sort: { department: 1 } },
+      ]),
+      User.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: { $ifNull: ['$employmentType', 'Full-time'] },
+            count: { $sum: 1 },
+          },
+        },
+        { $project: { _id: 0, type: '$_id', count: 1 } },
+        { $sort: { type: 1 } },
+      ]),
     ]);
 
+    const uniqueDepts = new Set(byDept.map((d) => d.department)).size;
+
+    // Add percent to byType
+    const byTypeWithPercent = byType.map((t) => ({
+      ...t,
+      percent: totalHeadcount > 0 ? parseFloat(((t.count / totalHeadcount) * 100).toFixed(1)) : 0,
+    }));
+
     return {
-      departments: headcount,
+      stats: {
+        totalHeadcount,
+        active,
+        inactive,
+        departments: uniqueDepts,
+      },
+      byDepartment: byDept,
+      byEmploymentType: byTypeWithPercent,
     };
   } catch (error) {
     logger.error(`Get headcount report error: ${error.message}`);
@@ -312,8 +372,8 @@ export const getEmployeeStatusReport = async (filters = {}) => {
     }));
 
     return {
-      summary: {
-        total,
+      stats: {
+        totalEmployees: total,
         active,
         inactive,
         terminated,
@@ -352,8 +412,8 @@ export const getTrainingReport = async (filters = {}) => {
       .catch(() => []);
 
     const recordList = records.map((record) => ({
-      employeeName: record.employeeId?.personalInfo?.givenName 
-        ? `${record.employeeId.personalInfo.givenName} ${record.employeeId.personalInfo.lastName}` 
+      employeeName: record.employeeId?.personalInfo?.givenName
+        ? `${record.employeeId.personalInfo.givenName} ${record.employeeId.personalInfo.lastName}`
         : 'Unknown',
       trainingName: record.courseName || 'Unknown Course',
       status: record.status || 'in-progress',
@@ -362,7 +422,7 @@ export const getTrainingReport = async (filters = {}) => {
     }));
 
     return {
-      summary: {
+      stats: {
         totalPrograms: totalRecords,
         totalAssignments: totalRecords,
         completed,
@@ -370,6 +430,7 @@ export const getTrainingReport = async (filters = {}) => {
         overdue,
       },
       assignments: recordList,
+      byDepartment: [],
     };
   } catch (error) {
     logger.error(`Get training report error: ${error.message}`);
@@ -722,5 +783,66 @@ export const getPESOReportData = async (filters = {}) => {
     'Date of Employment', 'Department',
   ];
   return getCustomReportData(PESO_FIELDS, filters);
+};
+
+export const getGlobalKpi = async () => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const in7Days = new Date(now);
+    in7Days.setDate(now.getDate() + 7);
+
+    const [
+      totalEmployees,
+      activeHeadcount,
+      newThisMonth,
+      openPositions,
+      closingSoon,
+      employees,
+    ] = await Promise.all([
+      User.countDocuments({ role: 'employee' }),
+      User.countDocuments({ role: 'employee', isActive: true }),
+      User.countDocuments({
+        role: 'employee',
+        createdAt: { $gte: startOfMonth },
+      }),
+      Job.countDocuments({ status: 'active' }),
+      Job.countDocuments({
+        status: 'active',
+        closingDate: { $lte: in7Days, $gte: now },
+      }),
+      User.find({ role: 'employee', isActive: true })
+        .select('dateOfEmployment')
+        .lean(),
+    ]);
+
+    // Average tenure in years
+    let avgTenureYears = '0.0';
+    if (employees.length > 0) {
+      const totalDays = employees.reduce((sum, emp) => {
+        if (!emp.dateOfEmployment) return sum;
+        const diff = now - new Date(emp.dateOfEmployment);
+        return sum + diff / (1000 * 60 * 60 * 24);
+      }, 0);
+      avgTenureYears = (totalDays / employees.length / 365).toFixed(1);
+    }
+
+    const activePercent = totalEmployees > 0
+      ? `${((activeHeadcount / totalEmployees) * 100).toFixed(1)}%`
+      : '0%';
+
+    return {
+      totalEmployees,
+      totalEmployeesThisMonth: newThisMonth,
+      activeHeadcount,
+      activePercent,
+      openPositions,
+      closingSoon,
+      avgTenureYears,
+    };
+  } catch (error) {
+    logger.error(`Get global KPI error: ${error.message}`);
+    throw error;
+  }
 };
 
