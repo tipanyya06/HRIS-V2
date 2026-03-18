@@ -4,26 +4,30 @@ import { verifyToken, requireRole } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/employees (must be before /:id)
+// GET /api/employees
 router.get(
-	'/',
-	verifyToken,
-	requireRole(['admin', 'super-admin', 'hr']),
-	employeeController.getEmployeesController
+  '/',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  employeeController.getEmployeesController
 );
 
-// Employee-accessible routes (verifyToken only, authorization checked in controller)
+// PATCH /api/employees/:id/status — MUST be before /:id to avoid 'status' being treated as ObjectId
+router.patch(
+  '/:id/status',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  employeeController.updateEmployeeStatusController
+);
+
+// Employee-accessible routes (authorization checked in controller)
 router.get('/:id', verifyToken, employeeController.getEmployeeByIdController);
 router.patch('/:id', verifyToken, employeeController.updateEmployeeController);
 
-// Admin-only routes (requires admin/super-admin/hr role)
+// Admin-only routes
 router.use(verifyToken, requireRole(['admin', 'super-admin', 'hr']));
 
-// PATCH /api/employees/:id/status
-router.patch('/:id/status', employeeController.setEmployeeStatusController);
-
-// DELETE /api/employees/:id
+// DELETE /api/employees/:id (legacy terminate — kept for backward compat)
 router.delete('/:id', employeeController.terminateEmployeeController);
 
 export default router;
-

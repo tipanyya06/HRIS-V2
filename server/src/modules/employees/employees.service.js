@@ -355,3 +355,48 @@ export const terminateEmployee = async (id) => {
     throw error;
   }
 };
+
+export const updateEmployeeStatus = async (employeeId, newStatus, adminId, reason = '') => {
+  try {
+    const allowedStatuses = ['active', 'inactive', 'on-leave', 'terminated'];
+    if (!allowedStatuses.includes(newStatus))
+      throw createError(400, `Invalid status. Must be one of: ${allowedStatuses.join(', ')}`);
+
+    const employee = await User.findOne({ _id: employeeId, role: 'employee' });
+    if (!employee)
+      throw createError(404, 'Employee not found');
+
+    if (employee.status === newStatus)
+      throw createError(409, `Employee is already ${newStatus}`);
+
+    if (employee.status === 'terminated' && newStatus !== 'terminated')
+      throw createError(400, 'Cannot reactivate a terminated employee. A new hire must be initiated.');
+
+    const update = {
+      status: newStatus,
+      isActive: newStatus === 'active',
+    };
+
+    if (newStatus === 'terminated') {
+      update.terminatedAt = new Date();
+    } else {
+      update.terminatedAt = null;
+    }
+
+    await User.findByIdAndUpdate(employeeId, update);
+
+    logger.info(
+      `Employee ${employeeId} status changed to ${newStatus} by admin ${adminId}. Reason: ${reason || 'not provided'}`
+    );
+
+    return {
+      employeeId,
+      previousStatus: employee.status,
+      newStatus,
+      terminatedAt: update.terminatedAt ?? null,
+    };
+  } catch (error) {
+    logger.error(`updateEmployeeStatus error: ${error.message}`);
+    throw error;
+  }
+};

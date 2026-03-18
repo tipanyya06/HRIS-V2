@@ -112,13 +112,21 @@ export default function Employees() {
     }
   };
 
+  const normalizeStatus = (emp) => {
+    if (!emp) return emp;
+    if (emp.status) return emp;
+    if (emp.terminatedAt) return { ...emp, status: 'terminated' };
+    return { ...emp, status: emp.isActive ? 'active' : 'inactive' };
+  };
+
   const openDetail = async (employee) => {
     try {
       setIsDetailLoading(true);
       setProfileTab('personal');
+      setStatusError('');
       setIsDetailOpen(true);
       const res = await api.get(`/employees/${employee._id}`);
-      setSelectedEmployee(res.data?.data || res.data || null);
+      setSelectedEmployee(normalizeStatus(res.data?.data || res.data || null));
     } catch (err) {
       const message = err.response?.data?.error || 'Failed to load employee details';
       setToast({ message, type: 'error' });
@@ -138,14 +146,14 @@ export default function Employees() {
     if (!statusEmployee) return;
     try {
       setIsSubmittingStatus(true);
-      const newStatus = !statusEmployee.isActive;
-      await api.patch(`/employees/${statusEmployee._id}/status`, {
-        isActive: newStatus,
-      });
+      const newStatus = statusEmployee.status === 'active' ? 'inactive'
+        : statusEmployee.status === 'on-leave' ? 'active'
+        : 'active';
+      await api.patch(`/employees/${statusEmployee._id}/status`, { status: newStatus });
       setIsStatusModalOpen(false);
       await fetchEmployees();
       setToast({
-        message: newStatus ? 'Employee activated.' : 'Employee deactivated.',
+        message: newStatus === 'active' ? 'Employee activated.' : 'Employee deactivated.',
         type: 'success',
       });
     } catch (err) {
@@ -167,7 +175,7 @@ export default function Employees() {
     if (!terminateEmployee) return;
     try {
       setIsTerminating(true);
-      await api.delete(`/employees/${terminateEmployee._id}`);
+      await api.patch(`/employees/${terminateEmployee._id}/status`, { status: 'terminated' });
       setIsTerminateModalOpen(false);
       await fetchEmployees();
       setToast({ message: 'Employee terminated.', type: 'success' });
@@ -178,6 +186,31 @@ export default function Employees() {
       });
     } finally {
       setIsTerminating(false);
+    }
+  };
+
+  // State for inline status change from the detail modal sidebar
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusError, setStatusError] = useState('');
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      setStatusLoading(true);
+      setStatusError('');
+      if (newStatus === 'terminated') {
+        const confirmed = window.confirm(
+          `Are you sure you want to terminate ${selectedEmployee?.personalInfo?.firstName ?? selectedEmployee?.email}? This cannot be undone.`
+        );
+        if (!confirmed) return;
+      }
+      await api.patch(`/employees/${selectedEmployee._id}/status`, { status: newStatus, reason: '' });
+      await fetchEmployees();
+      setSelectedEmployee(null);
+      setIsDetailOpen(false);
+    } catch (error) {
+      setStatusError(error.response?.data?.error ?? 'Failed to update status. Please try again.');
+    } finally {
+      setStatusLoading(false);
     }
   };
 
@@ -408,10 +441,12 @@ export default function Employees() {
                         <Button size="sm" variant="ghost" onClick={() => openDetail(emp)}>
                           View
                         </Button>
-                        <Button size="sm" variant="secondary" onClick={() => openStatusModal(emp)}>
-                          {emp.status === 'active' || emp.isActive ? 'Deactivate' : 'Activate'}
-                        </Button>
-                        {emp.status === 'active' || emp.isActive ? (
+                        {emp.status !== 'terminated' ? (
+                          <Button size="sm" variant="secondary" onClick={() => openStatusModal(emp)}>
+                            {emp.status === 'active' ? 'Deactivate' : emp.status === 'on-leave' ? 'Return' : 'Activate'}
+                          </Button>
+                        ) : null}
+                        {emp.status === 'active' ? (
                           <Button size="sm" variant="danger" onClick={() => openTerminateModal(emp)}>
                             Terminate
                           </Button>
@@ -470,74 +505,100 @@ export default function Employees() {
         {isDetailLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
         ) : selectedEmployee ? (
-          <div className="flex -mx-6 -mb-6 -mt-4" style={{ minHeight: '560px' }}>
+          <div className="flex h-[580px] overflow-hidden -mx-6 -mb-6 -mt-4">
 
             {/* LEFT SIDEBAR */}
-            <div className="w-60 flex-shrink-0 bg-[#1e3a5f] flex flex-col items-center py-8 px-5 rounded-bl-lg">
+            <div className="w-60 flex-shrink-0 bg-[#1e3a5f] flex flex-col justify-between overflow-hidden rounded-bl-lg">
 
-              {/* Avatar */}
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 mb-4">
-                {selectedEmployee.profilePicUrl ? (
-                  <img src={selectedEmployee.profilePicUrl} alt={getEmployeeName(selectedEmployee)} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-[#2596BE] flex items-center justify-center text-white text-3xl font-bold">
-                    {(selectedEmployee.personalInfo?.givenName || 'E').charAt(0).toUpperCase()}
+              {/* Top content */}
+              <div className="flex flex-col items-center pt-4 px-5">
+
+                {/* Avatar */}
+                <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white/20 mb-2">
+                  {selectedEmployee.profilePicUrl ? (
+                    <img src={selectedEmployee.profilePicUrl} alt={getEmployeeName(selectedEmployee)} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-[#2596BE] flex items-center justify-center text-white text-2xl font-bold">
+                      {(selectedEmployee.personalInfo?.givenName || 'E').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name + email + status */}
+                <p className="text-white font-semibold text-[13px] text-center leading-snug">{getEmployeeName(selectedEmployee)}</p>
+                <p className="text-white/50 text-xs text-center mt-0.5 mb-2">{selectedEmployee.email}</p>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${getStatusBadge(selectedEmployee).class}`}>
+                  {getStatusBadge(selectedEmployee).label}
+                </span>
+
+                {/* Divider */}
+                <div className="w-full border-t border-white/10 mb-2" />
+
+                {/* Info fields */}
+                <div className="w-full flex flex-col gap-2 text-left pb-2">
+                  <div>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest">Department</p>
+                    <p className="text-white text-[12px] font-medium">{selectedEmployee.department || '-'}</p>
                   </div>
-                )}
-              </div>
-
-              {/* Name + email + status */}
-              <p className="text-white font-semibold text-sm text-center leading-snug">{getEmployeeName(selectedEmployee)}</p>
-              <p className="text-white/50 text-xs text-center mt-1 mb-2">{selectedEmployee.email}</p>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mb-5 ${getStatusBadge(selectedEmployee).class}`}>
-                {getStatusBadge(selectedEmployee).label}
-              </span>
-
-              {/* Divider */}
-              <div className="w-full border-t border-white/10 mb-5" />
-
-              {/* Info fields */}
-              <div className="w-full space-y-4 text-left">
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Department</p>
-                  <p className="text-white text-sm font-medium">{selectedEmployee.department || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Position</p>
-                  <p className="text-white text-sm font-medium">{selectedEmployee.positionTitle || selectedEmployee.position || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Classification</p>
-                  <p className="text-white text-sm font-medium">{selectedEmployee.classification || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Role</p>
-                  <p className="text-white text-sm font-medium capitalize">{selectedEmployee.role || '-'}</p>
+                  <div>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest">Position</p>
+                    <p className="text-white text-[12px] font-medium">{selectedEmployee.positionTitle || selectedEmployee.position || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest">Classification</p>
+                    <p className="text-white text-[12px] font-medium">{selectedEmployee.classification || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest">Role</p>
+                    <p className="text-white text-[12px] font-medium capitalize">{selectedEmployee.role || '-'}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Spacer */}
-              <div className="flex-1" />
-
-              {/* Action buttons */}
-              <div className="w-full space-y-2 pt-4">
-                <button
-                  onClick={() => { setIsDetailOpen(false); openStatusModal(selectedEmployee); }}
-                  className="w-full px-3 py-2 text-xs font-semibold bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors border border-white/10"
-                >
-                  {selectedEmployee.isActive ? 'Deactivate' : 'Activate'}
-                </button>
-                {selectedEmployee.isActive ? (
+              {/* Action buttons — always at bottom */}
+              <div className="px-5 pb-5 flex flex-col gap-1.5">
+                {selectedEmployee?.status !== 'terminated' ? (
                   <button
-                    onClick={() => { setIsDetailOpen(false); openTerminateModal(selectedEmployee); }}
-                    className="w-full px-3 py-2 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    onClick={() => handleStatusChange('inactive')}
+                    disabled={statusLoading}
+                    className="w-full h-[30px] rounded-md text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Terminate
+                    {statusLoading ? 'Updating...' : selectedEmployee?.status === 'inactive' ? 'Reactivate' : 'Deactivate'}
                   </button>
+                ) : null}
+                {selectedEmployee?.status === 'active' ? (
+                  <button
+                    onClick={() => handleStatusChange('on-leave')}
+                    disabled={statusLoading}
+                    className="w-full h-[30px] rounded-md text-[11px] font-medium bg-amber-500/80 text-white hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {statusLoading ? 'Updating...' : 'Set on leave'}
+                  </button>
+                ) : null}
+                {selectedEmployee?.status === 'on-leave' ? (
+                  <button
+                    onClick={() => handleStatusChange('active')}
+                    disabled={statusLoading}
+                    className="w-full h-[30px] rounded-md text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {statusLoading ? 'Updating...' : 'Return from leave'}
+                  </button>
+                ) : null}
+                {selectedEmployee?.status !== 'terminated' ? (
+                  <button
+                    onClick={() => handleStatusChange('terminated')}
+                    disabled={statusLoading}
+                    className="w-full h-[30px] rounded-md text-[11px] font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {statusLoading ? 'Updating...' : 'Terminate'}
+                  </button>
+                ) : null}
+                {statusError ? (
+                  <p className="text-[11px] text-red-300 text-center">{statusError}</p>
                 ) : null}
                 <button
                   onClick={() => setIsDetailOpen(false)}
-                  className="w-full px-3 py-2 text-xs font-semibold bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors border border-white/10"
+                  className="w-full h-[30px] rounded-md text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10"
                 >
                   Close
                 </button>
@@ -707,17 +768,26 @@ export default function Employees() {
       <Modal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
-        title={statusEmployee?.isActive ? 'Deactivate Employee' : 'Activate Employee'}
+        title={
+          statusEmployee?.status === 'active' ? 'Deactivate Employee'
+          : statusEmployee?.status === 'on-leave' ? 'Return from Leave'
+          : 'Activate Employee'
+        }
         size="sm"
       >
         {statusEmployee ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Are you sure you want to <strong>{statusEmployee.isActive ? 'deactivate' : 'activate'}</strong>{' '}
+              Are you sure you want to{' '}
+              <strong>
+                {statusEmployee.status === 'active' ? 'deactivate'
+                  : statusEmployee.status === 'on-leave' ? 'return from leave'
+                  : 'activate'}
+              </strong>{' '}
               <strong>{getEmployeeName(statusEmployee)}</strong>?
             </p>
 
-            {statusEmployee.isActive ? (
+            {statusEmployee.status === 'active' ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-sm text-yellow-800">
                   Deactivating will prevent this employee from logging in.
@@ -726,7 +796,7 @@ export default function Employees() {
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-sm text-green-800">
-                  Activating will restore login access for this employee.
+                  This will restore active status for this employee.
                 </p>
               </div>
             )}
@@ -736,12 +806,14 @@ export default function Employees() {
                 Cancel
               </Button>
               <Button
-                variant={statusEmployee.isActive ? 'danger' : 'primary'}
+                variant={statusEmployee.status === 'active' ? 'danger' : 'primary'}
                 onClick={handleStatusToggle}
                 isLoading={isSubmittingStatus}
                 isDisabled={isSubmittingStatus}
               >
-                {statusEmployee.isActive ? 'Deactivate' : 'Activate'}
+                {statusEmployee.status === 'active' ? 'Deactivate'
+                  : statusEmployee.status === 'on-leave' ? 'Return from leave'
+                  : 'Activate'}
               </Button>
             </div>
           </div>

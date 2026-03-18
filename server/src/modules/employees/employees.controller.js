@@ -116,3 +116,24 @@ export const terminateEmployeeController = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateEmployeeStatusController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, reason = '' } = req.body;
+    const adminId = req.user.id;
+
+    if (!status)
+      return res.status(400).json({ error: 'status is required' });
+
+    const result = await employeeService.updateEmployeeStatus(id, status, adminId, reason);
+
+    res.status(200).json({
+      success: true,
+      message: `Employee status updated to ${status}`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
