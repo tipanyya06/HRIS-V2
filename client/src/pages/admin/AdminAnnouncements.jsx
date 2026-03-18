@@ -160,7 +160,7 @@ export default function Announcements() {
     {
       key: 'targetAudience',
       label: 'Audience',
-      render: (row) => <span className="text-sm text-gray-700">{AUDIENCE_LABELS[row.targetAudience]}</span>,
+      render: (row) => <span className="text-[13px] text-gray-700">{AUDIENCE_LABELS[row.targetAudience]}</span>,
     },
     {
       key: 'isActive',
@@ -175,7 +175,7 @@ export default function Announcements() {
       key: 'createdAt',
       label: 'Created',
       render: (row) => (
-        <span className="text-sm text-gray-500">
+        <span className="text-[13px] text-gray-700">
           {new Date(row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -192,7 +192,7 @@ export default function Announcements() {
           >
             <Edit2 size={18} />
           </button>
-          {user?.role === 'super-admin' && (
+          {user?.role === 'super-admin' ? (
             <button
               onClick={() => handleDelete(row)}
               className="text-red-600 hover:text-red-800 p-1"
@@ -200,7 +200,7 @@ export default function Announcements() {
             >
               <Trash2 size={18} />
             </button>
-          )}
+          ) : null}
         </div>
       ),
     },
@@ -209,12 +209,12 @@ export default function Announcements() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Announcements</h1>
-          <p className="text-gray-600">Company-wide announcements and notifications</p>
+          <h1 className="text-[20px] font-semibold text-[#1a3a5c]">Announcements</h1>
+          <p className="text-[13px] text-gray-500 mt-0.5">Create and manage company-wide announcements.</p>
         </div>
         <Button onClick={() => openModal()} variant="primary">
           <Bell size={18} className="mr-2" />
@@ -223,20 +223,20 @@ export default function Announcements() {
       </div>
 
       {/* Error */}
-      {error && (
+      {error ? (
         <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700">
           {typeof error === 'string' ? error : error?.message || 'An error occurred'}
         </div>
-      )}
+      ) : null}
 
       {/* Toast */}
-      {toastMessage && (
+      {toastMessage ? (
         <Toast
           message={toastMessage}
           type={toastType}
           onClose={() => setToastMessage('')}
         />
-      )}
+      ) : null}
 
       {/* Table */}
       {announcements.length > 0 ? (
@@ -247,7 +247,7 @@ export default function Announcements() {
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-6 py-3 text-left text-sm font-medium text-gray-700"
+                    className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-gray-500"
                   >
                     {col.label}
                   </th>
@@ -261,7 +261,7 @@ export default function Announcements() {
                   className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50 border-b border-gray-200'}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-6 py-4 text-sm">
+                    <td key={col.key} className="px-6 py-4 text-[13px] text-gray-700">
                       {col.render(announcement)}
                     </td>
                   ))}
@@ -273,12 +273,12 @@ export default function Announcements() {
       ) : (
         <div className="text-center py-12">
           <Bell size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500">No announcements yet</p>
+          <p className="text-[13px] text-gray-700">No announcements yet</p>
         </div>
       )}
 
       {/* Modal */}
-      {isModalOpen && (
+      {isModalOpen ? (
         <Modal
           isOpen={isModalOpen}
           onClose={closeModal}
@@ -287,7 +287,7 @@ export default function Announcements() {
           <div className="space-y-4">
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 Title *
               </label>
               <input
@@ -301,7 +301,7 @@ export default function Announcements() {
 
             {/* Body */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 Body *
               </label>
               <textarea
@@ -315,7 +315,7 @@ export default function Announcements() {
 
             {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 Priority
               </label>
               <select
@@ -332,7 +332,7 @@ export default function Announcements() {
 
             {/* Target Audience */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
                 Target Audience
               </label>
               <select
@@ -379,7 +379,7 @@ export default function Announcements() {
             </div>
           </div>
         </Modal>
-      )}
+      ) : null}
     </div>
   );
 }

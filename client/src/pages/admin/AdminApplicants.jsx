@@ -328,7 +328,7 @@ export default function Applicants() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       {/* PAGE HEADER */}
       <PageHeader
         title="Applicants"

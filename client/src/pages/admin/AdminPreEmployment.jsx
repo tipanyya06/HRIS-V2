@@ -107,14 +107,14 @@ export default function AdminPreEmployment() {
       {
         key: 'position',
         label: 'Position',
-        render: (row) => <span className="text-sm text-gray-700">{row.position || '—'}</span>,
+        render: (row) => <span className="text-[13px] text-gray-700">{row.position || '—'}</span>,
       },
       {
         key: 'progress',
         label: 'Progress',
         render: (row) => {
           const approved = (row.items || []).filter((item) => item.status === 'approved').length;
-          return <span className="text-sm text-gray-600">{approved} / {(row.items || []).length} approved</span>;
+          return <span className="text-[13px] text-gray-700">{approved} / {(row.items || []).length} approved</span>;
         },
       },
       {
@@ -133,10 +133,10 @@ export default function AdminPreEmployment() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Pre-Employment</h1>
-        <p className="text-gray-600 mt-2">Review applicant checklist submissions and approve requirements.</p>
+        <h1 className="text-[20px] font-semibold text-[#1a3a5c]">Pre-Employment</h1>
+        <p className="text-[13px] text-gray-500 mt-0.5">Review applicant checklist submissions and approve requirements.</p>
       </div>
 
       {error ? (
@@ -157,9 +157,9 @@ export default function AdminPreEmployment() {
         <Card className="border border-gray-200">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{getApplicantName(selectedRecord.userId)}</h2>
-              <p className="text-sm text-gray-500">{selectedRecord.userId?.email || '—'}</p>
-              <p className="text-sm text-gray-500">Position: {selectedRecord.position || '—'}</p>
+              <h2 className="text-[14px] font-medium text-[#1a3a5c]">{getApplicantName(selectedRecord.userId)}</h2>
+              <p className="text-[13px] text-gray-700">{selectedRecord.userId?.email || '—'}</p>
+              <p className="text-[13px] text-gray-700">Position: {selectedRecord.position || '—'}</p>
             </div>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[selectedRecord.overallStatus] || STATUS_STYLES['not-started']}`}>
               {selectedRecord.overallStatus}
@@ -172,18 +172,18 @@ export default function AdminPreEmployment() {
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-gray-900">{item.label}</h3>
+                      <h3 className="text-[14px] font-medium text-[#1a3a5c]">{item.label}</h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[item.status] || STATUS_STYLES.pending}`}>
                         {item.status}
                       </span>
                     </div>
                     {item.originalName ? (
-                      <p className="text-sm text-gray-500 mt-1">{item.originalName}</p>
+                      <p className="text-[13px] text-gray-700 mt-1">{item.originalName}</p>
                     ) : (
-                      <p className="text-sm text-gray-500 mt-1">No file uploaded</p>
+                      <p className="text-[13px] text-gray-700 mt-1">No file uploaded</p>
                     )}
                     {item.adminNote ? (
-                      <p className="text-sm text-gray-600 mt-2">Note: {item.adminNote}</p>
+                      <p className="text-[13px] text-gray-700 mt-2">Note: {item.adminNote}</p>
                     ) : null}
                   </div>
 

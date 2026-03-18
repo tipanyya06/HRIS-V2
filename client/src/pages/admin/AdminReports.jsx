@@ -275,7 +275,7 @@ export default function Reports() {
   const kpiData = getKpiValues();
 
   return (
-    <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       {/* ===== SECTION 1: PAGE HEADER ===== */}
       <div>
         <h1 className="text-[20px] font-semibold text-[#1a3a5c]">Reports</h1>

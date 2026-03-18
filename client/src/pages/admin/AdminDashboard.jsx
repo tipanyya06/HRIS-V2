@@ -109,7 +109,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="w-full px-6 py-5 flex flex-col gap-4">
         <div className="flex justify-center items-center h-64">
           <LoadingSpinner />
         </div>
@@ -119,7 +119,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="w-full px-6 py-5 flex flex-col gap-4">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
           {error}
         </div>
@@ -129,7 +129,7 @@ export default function Dashboard() {
 
   if (!stats) {
     return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="w-full px-6 py-5 flex flex-col gap-4">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
           Failed to load dashboard data.
         </div>
@@ -299,7 +299,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#223B5B]">

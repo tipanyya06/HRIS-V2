@@ -206,7 +206,7 @@ export default function ActivityLogs() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       <PageHeader title="Activity Logs" subtitle={`${total} log${total !== 1 ? 's' : ''} total`} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

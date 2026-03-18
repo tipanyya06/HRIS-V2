@@ -249,7 +249,7 @@ export default function Employees() {
   const inactiveCount = employees.filter((e) => !e.isActive).length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       <PageHeader
         title="Employee Records"
         subtitle={`${total} employee${total !== 1 ? 's' : ''} total`}

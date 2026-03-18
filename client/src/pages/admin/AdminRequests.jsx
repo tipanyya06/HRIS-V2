@@ -94,11 +94,11 @@ export default function AdminRequests() {
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Employee Requests</h1>
-          <p className="text-sm text-gray-500 mt-1">Review and respond to employee submissions</p>
+          <h1 className="text-[20px] font-semibold text-[#1a3a5c]">Requests</h1>
+          <p className="text-[13px] text-gray-500 mt-0.5">Review and manage employee requests and approvals.</p>
         </div>
         {pendingCount > 0 ? (
           <span className="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-full">
@@ -185,7 +185,7 @@ export default function AdminRequests() {
                       {req.priority}
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{req.subject}</p>
+                      <p className="text-[14px] font-medium text-[#1a3a5c]">{req.subject}</p>
                       <p className="text-xs text-gray-400">
                         {employeeName} - {req.type} - {new Date(req.createdAt).toLocaleDateString()}
                       </p>
@@ -196,18 +196,18 @@ export default function AdminRequests() {
 
                 {expandedId === req._id ? (
                   <div className="px-4 pb-5 border-t border-gray-100 pt-4 space-y-4">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{req.message}</p>
+                    <p className="text-[13px] text-gray-700 whitespace-pre-wrap">{req.message}</p>
 
                     {req.date ? (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[13px] text-gray-700">
                         Preferred date: {new Date(req.date).toLocaleDateString()}
                       </p>
                     ) : null}
 
                     {req.adminNote ? (
                       <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-blue-700 mb-1">Previous HR Response</p>
-                        <p className="text-sm text-blue-800">{req.adminNote}</p>
+                        <p className="text-[14px] font-medium text-[#1a3a5c] mb-1">Previous HR Response</p>
+                        <p className="text-[13px] text-gray-700">{req.adminNote}</p>
                       </div>
                     ) : null}
 
