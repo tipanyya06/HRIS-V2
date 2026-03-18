@@ -1,6 +1,7 @@
 import express from 'express';
 import * as employeeController from './employees.controller.js';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
+import User from '../auth/user.model.js';
 import {
   getEmployeeDocsController,
   uploadEmployeeDocController,
@@ -47,6 +48,28 @@ router.delete(
   verifyToken,
   requireRole(['admin', 'super-admin', 'hr']),
   deleteEmployeeDocController
+);
+
+router.get(
+  '/me/documents',
+  verifyToken,
+  async (req, res, next) => {
+    try {
+      const employeeId = req.user.id;
+      const user = await User.findById(employeeId)
+        .select('documents').lean();
+      if (!user)
+        return res.status(404).json({
+          error: 'Employee not found',
+        });
+      res.status(200).json({
+        success: true,
+        data: { documents: user.documents ?? [] },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 // Employee-accessible routes (authorization checked in controller)

@@ -33,6 +33,24 @@ export const getEmployeeByIdController = async (req, res, next) => {
     }
 
     const employee = await employeeService.getEmployeeById(req.params.id);
+    const { id } = req.params;
+
+    // Only decrypt for the employee viewing their own profile
+    // Never decrypt for other users
+    if (req.user.id === id || req.user.id === employee._id.toString()) {
+      const { decrypt } = await import('../../utils/encrypt.js');
+      if (employee.payrollInfo?.accountNumber) {
+        employee.payrollInfo.accountNumber =
+          decrypt(employee.payrollInfo.accountNumber);
+      }
+      // Never decrypt or send basicSalary
+      if (employee.payrollInfo) {
+        delete employee.payrollInfo.basicSalary;
+      }
+    } else {
+      // For non-owners, remove all payroll info
+      delete employee.payrollInfo;
+    }
 
     res.status(200).json({
       success: true,

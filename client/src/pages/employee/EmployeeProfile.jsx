@@ -31,6 +31,15 @@ export default function EmployeeProfile() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [revealedFields, setRevealedFields] = useState({});
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
 
   // Section edit states
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -302,6 +311,51 @@ export default function EmployeeProfile() {
     } catch (err) {
       setToastType('error');
       setToastMessage(extractErrorMessage(err));
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      if (!passwordForm.currentPassword ||
+          !passwordForm.newPassword ||
+          !passwordForm.confirmPassword) {
+        setToastMessage('All password fields are required');
+        setToastType('error');
+        return;
+      }
+      if (passwordForm.newPassword !==
+          passwordForm.confirmPassword) {
+        setToastMessage('New passwords do not match');
+        setToastType('error');
+        return;
+      }
+      if (passwordForm.newPassword.length < 8) {
+        setToastMessage(
+          'New password must be at least 8 characters'
+        );
+        setToastType('error');
+        return;
+      }
+      setPasswordLoading(true);
+      await api.patch('/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword:     passwordForm.newPassword,
+      });
+      setToastMessage('Password changed successfully');
+      setToastType('success');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setShowPasswordSection(false);
+    } catch (err) {
+      setToastMessage(
+        err.response?.data?.error ?? 'Failed to change password'
+      );
+      setToastType('error');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -1473,6 +1527,151 @@ export default function EmployeeProfile() {
           </div>
         )}
       </Card>
+
+      {/* Change Password */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-[14px] font-semibold text-[#1a3a5c]">
+            Change Password
+          </h2>
+          <button
+            onClick={() =>
+              setShowPasswordSection(s => !s)
+            }
+            className="text-[12px] text-[#185FA5] border border-gray-200 rounded-md px-3 h-[28px] bg-white hover:bg-gray-50"
+          >
+            {showPasswordSection ? 'Cancel' : 'Change'}
+          </button>
+        </div>
+
+        {showPasswordSection ? (
+          <div className="px-5 py-4 flex flex-col gap-3">
+            {/* Current password */}
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1 block">
+                Current password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPw ? 'text' : 'password'}
+                  value={passwordForm.currentPassword}
+                  onChange={e => setPasswordForm(f => ({
+                    ...f, currentPassword: e.target.value
+                  }))}
+                  className="w-full h-[36px] px-3 pr-10 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
+                  placeholder="Enter current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPw(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* New password */}
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1 block">
+                New password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPw ? 'text' : 'password'}
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm(f => ({
+                    ...f, newPassword: e.target.value
+                  }))}
+                  className="w-full h-[36px] px-3 pr-10 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
+                  placeholder="Min 8 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPw(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm password */}
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1 block">
+                Confirm new password
+              </label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={e => setPasswordForm(f => ({
+                  ...f, confirmPassword: e.target.value
+                }))}
+                className="w-full h-[36px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
+                placeholder="Re-enter new password"
+              />
+            </div>
+
+            <button
+              onClick={handleChangePassword}
+              disabled={passwordLoading}
+              className="h-[36px] px-4 bg-[#185FA5] text-white rounded-md text-[13px] font-medium hover:bg-[#0C447C] disabled:opacity-50 disabled:cursor-not-allowed self-start"
+            >
+              {passwordLoading
+                ? 'Changing...'
+                : 'Change password'}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Payroll Information — read only */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-[14px] font-semibold text-[#1a3a5c]">
+            Payroll Information
+          </h2>
+          <span className="text-[11px] text-gray-400 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
+            View only
+          </span>
+        </div>
+        <div className="px-5 py-4 grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+              Bank name
+            </p>
+            <p className="text-[13px] text-gray-700">
+              {employee?.payrollInfo?.bankName ?? '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+              Account name
+            </p>
+            <p className="text-[13px] text-gray-700">
+              {employee?.payrollInfo?.accountName ?? '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+              Account number
+            </p>
+            <p className="text-[13px] text-gray-700 font-mono">
+              {employee?.payrollInfo?.accountNumber
+                ? maskValue(employee.payrollInfo.accountNumber)
+                : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mb-1">
+              Basic salary
+            </p>
+            <p className="text-[13px] text-gray-400 italic">
+              Contact HR to view salary information
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
