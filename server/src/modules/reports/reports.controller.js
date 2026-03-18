@@ -1,5 +1,6 @@
 import { OshaReport, IncidentReport } from './reports.model.js';
 import { logger } from '../../utils/logger.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 
 export const createOshaReport = async (req, res, next) => {
   try {
@@ -151,6 +152,12 @@ export const exportCSV = async (req, res, next) => {
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    logActivity(
+      req,
+      `Report exported as CSV: ${type} by ${req.user?.email ?? 'unknown'}`,
+      'report',
+      null
+    );
     res.status(200).send(csvContent);
 
     logger.info(`CSV export: ${type} by user ${req.user.id}`);
@@ -264,6 +271,12 @@ export const exportPDF = async (req, res, next) => {
       }
     }
 
+    logActivity(
+      req,
+      `Report exported as PDF: ${type} by ${req.user?.email ?? 'unknown'}`,
+      'report',
+      null
+    );
     // End the PDF document - MUST be called after all content added
     doc.end();
 

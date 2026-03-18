@@ -52,16 +52,15 @@ export const loginController = async (req, res, next) => {
     }
 
     const result = await login(email, password);
-    try {
-      await logActivity(
-        req,
-        `User logged in: ${result.user?.email}`,
-        'auth',
-        result.user?.id
-      );
-    } catch (logErr) {
-      // Never allow logging to break the request
-    }
+    // Temporarily set req.user so logActivity can
+    // resolve the user name and email correctly
+    req.user = { id: result.user?.id, email: result.user?.email, role: result.user?.role };
+    logActivity(
+      req,
+      `User logged in: ${result.user?.email}`,
+      'auth',
+      result.user?.id
+    );
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -90,11 +89,12 @@ export const logoutController = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const result = await logout(userId);
-    try {
-      await logActivity(req, 'User logged out', 'auth', req.user?.id);
-    } catch (logErr) {
-      // Never allow logging to break the request
-    }
+    logActivity(
+      req,
+      `User logged out: ${req.user?.email ?? 'unknown'}`,
+      'auth',
+      req.user?.id ?? null
+    );
     res.status(200).json(result);
   } catch (error) {
     next(error);

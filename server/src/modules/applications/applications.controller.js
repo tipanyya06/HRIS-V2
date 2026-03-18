@@ -294,16 +294,12 @@ export const updateStageController = async (req, res, next) => {
       `${req.user.email}`,
       notes || ''
     );
-    try {
-      await logActivity(
-        req,
-        `Stage updated to ${newStage}: ${applicant.fullName}`,
-        'applicant',
-        id
-      );
-    } catch (logErr) {
-      // Never allow logging to break the request
-    }
+    logActivity(
+      req,
+      `Applicant ${applicant.fullName ?? applicant.email ?? id} moved to stage: ${newStage}`,
+      'applicant',
+      id
+    );
 
     // Notify applicant of stage change (silent fail)
     try {
@@ -350,6 +346,13 @@ export const addNoteController = async (req, res, next) => {
       req.user.email
     );
 
+    logActivity(
+      req,
+      `Note added to applicant: ${applicant?.fullName ?? applicant?.email ?? id}`,
+      'applicant',
+      id
+    );
+
     res.status(200).json({
       success: true,
       message: 'Note added successfully',
@@ -368,7 +371,14 @@ export const deleteApplicationController = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await applicationService.deleteApplication(id);
+    const applicant = await applicationService.deleteApplication(id);
+
+    logActivity(
+      req,
+      `Applicant deleted: ${applicant.fullName ?? applicant.email ?? id}`,
+      'applicant',
+      id
+    );
 
     res.status(200).json({
       success: true,

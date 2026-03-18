@@ -1,5 +1,6 @@
 import express from 'express';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 import {
   getDashboardStats,
   getATSReport,
@@ -217,6 +218,12 @@ router.post(
         return res.status(400).json({ error: 'At least one field is required' });
       }
       const data = await getCustomReportData(fields, filters);
+      logActivity(
+        req,
+        `Custom report generated: ${fields?.length ?? 0} fields selected`,
+        'report',
+        null
+      );
       return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
@@ -281,6 +288,12 @@ router.post(
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
         await workbook.xlsx.write(res);
+        logActivity(
+          req,
+          `Custom report exported as ${format}: ${reportName}`,
+          'report',
+          null
+        );
         return res.end();
       }
 

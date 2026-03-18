@@ -1,7 +1,9 @@
 import * as announcementService from './announcements.service.js';
 import { createBulkNotifications } from '../notifications/notification.service.js';
+import Announcement from './announcement.model.js';
 import User from '../auth/user.model.js';
 import { logger } from '../../utils/logger.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 
 const createError = (status, message) => {
   const err = new Error(message);
@@ -88,6 +90,13 @@ export const createAnnouncementController = async (req, res, next) => {
       logger.error('Notification error:', notifErr);
     }
 
+    logActivity(
+      req,
+      `Announcement created: ${announcement.title ?? 'Untitled'}`,
+      'announcement',
+      announcement._id
+    );
+
     res.status(201).json({
       success: true,
       data: announcement,
@@ -102,6 +111,13 @@ export const updateAnnouncementController = async (req, res, next) => {
     const announcement = await announcementService.updateAnnouncement(
       req.params.id,
       req.body
+    );
+
+    logActivity(
+      req,
+      `Announcement updated: ${announcement.title ?? req.params.id}`,
+      'announcement',
+      req.params.id
     );
 
     res.status(200).json({
@@ -119,7 +135,17 @@ export const updateAnnouncementController = async (req, res, next) => {
 
 export const deleteAnnouncementController = async (req, res, next) => {
   try {
-    await announcementService.deleteAnnouncement(req.params.id);
+    const { id } = req.params;
+    const toDelete = await Announcement.findById(id);
+    const deletedTitle = toDelete?.title ?? id;
+    await announcementService.deleteAnnouncement(id);
+
+    logActivity(
+      req,
+      `Announcement deleted: ${deletedTitle}`,
+      'announcement',
+      id
+    );
 
     res.status(200).json({
       success: true,

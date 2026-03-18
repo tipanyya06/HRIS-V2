@@ -1,6 +1,7 @@
 import * as employeeService from './employees.service.js';
 import { logActivity } from '../../middleware/activityLogger.js';
 import multer from 'multer';
+import User from '../auth/user.model.js';
 import {
   uploadEmployeeDocument,
   deleteEmployeeDocument,
@@ -55,6 +56,13 @@ export const updateEmployeeController = async (req, res, next) => {
     }
 
     const employee = await employeeService.updateEmployee(req.params.id, req.body);
+
+    logActivity(
+      req,
+      `Employee profile updated: ${employee.personalInfo?.fullName ?? employee.email ?? id}`,
+      'employee',
+      id
+    );
 
     res.status(200).json({
       success: true,
@@ -133,9 +141,16 @@ export const updateEmployeeStatusController = async (req, res, next) => {
       return res.status(400).json({ error: 'status is required' });
 
     const result = await employeeService.updateEmployeeStatus(id, status, adminId, reason);
-    await logActivity(
+    const updatedEmployee = await User.findById(id)
+      .select('personalInfo.fullName personalInfo.firstName personalInfo.lastName email')
+      .lean();
+    const empName = updatedEmployee?.personalInfo?.fullName
+      ?? `${updatedEmployee?.personalInfo?.firstName ?? ''} ${updatedEmployee?.personalInfo?.lastName ?? ''}`.trim()
+      ?? updatedEmployee?.email
+      ?? id;
+    logActivity(
       req,
-      `Employee status changed to ${status}: ${id}`,
+      `Employee status changed to ${status}: ${empName}`,
       'employee',
       id
     );
@@ -167,6 +182,12 @@ export const uploadEmployeeDocController = async (req, res, next) => {
       return res.status(400).json({ error: `Invalid docType. Must be: ${allowed.join(', ')}` });
 
     const doc = await uploadEmployeeDocument(id, req.file, docType, label);
+    logActivity(
+      req,
+      `Document uploaded for employee: ${id} — ${docType}`,
+      'employee',
+      id
+    );
     res.status(201).json({ success: true, message: 'Document uploaded successfully', data: doc });
   } catch (error) {
     next(error);
@@ -180,6 +201,12 @@ export const deleteEmployeeDocController = async (req, res, next) => {
     if (!filePath) return res.status(400).json({ error: 'filePath is required' });
 
     const result = await deleteEmployeeDocument(id, filePath);
+    logActivity(
+      req,
+      `Document deleted for employee: ${id}`,
+      'employee',
+      id
+    );
     res.status(200).json({ success: true, message: 'Document deleted', data: result });
   } catch (error) {
     next(error);
