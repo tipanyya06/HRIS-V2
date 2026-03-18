@@ -1,6 +1,8 @@
 import * as applicationService from './applications.service.js';
 import { logger } from '../../utils/logger.js';
 import User from '../auth/user.model.js';
+import Applicant from './applicant.model.js';
+import Job from '../jobs/job.model.js';
 import { logActivity } from '../../middleware/activityLogger.js';
 import {
   createNotification,
@@ -273,6 +275,58 @@ export const getApplicationByIdController = async (req, res, next) => {
     if (error.status === 404) {
       return res.status(404).json({ error: error.message });
     }
+    next(error);
+  }
+};
+
+
+// GET /api/applications/:id/offer-letter - Download offer letter PDF (admin only)
+export const offerLetterController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const applicant = await Applicant.findById(id);
+    if (!applicant)
+      return res.status(404).json({
+        error: 'Applicant not found',
+      });
+
+    // Only allow offer letter for offer/hired stage
+    if (!['offer', 'hired'].includes(applicant.stage))
+      return res.status(400).json({
+        error: 'Offer letter only available for applicants at offer or hired stage',
+      });
+
+    // Get the linked user (employee) if hired
+    const employee = applicant.userId
+      ? await User.findById(applicant.userId).lean()
+      : {
+        email: applicant.email,
+        personalInfo: { fullName: applicant.fullName },
+      };
+
+    const job = applicant.jobId
+      ? await Job.findById(applicant.jobId).lean()
+      : null;
+
+    const { generateOfferLetterPDF } = await import('../../utils/email.js');
+
+    const pdfBuffer = await generateOfferLetterPDF(
+      employee,
+      job
+    );
+
+    const filename = `offer-letter-${
+      applicant.fullName?.replace(/\s+/g, '-') ?? applicant._id
+    }.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
+    );
+    res.status(200).send(pdfBuffer);
+  } catch (error) {
     next(error);
   }
 };

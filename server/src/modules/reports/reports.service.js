@@ -421,6 +421,106 @@ export const getTrainingReport = async (filters = {}) => {
       expiryDate: record.expiresAt ? new Date(record.expiresAt).toLocaleDateString() : 'N/A',
     }));
 
+    // Join TrainingRecord with User to get department
+    const byDept = await TrainingRecord.aggregate([
+      { $match: baseFilter },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'employeeId',
+          foreignField: '_id',
+          as: 'employee',
+        },
+      },
+      {
+        $unwind: {
+          path: '$employee',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $ifNull: ['$employee.department', 'Unassigned'],
+          },
+          assigned: { $sum: 1 },
+          completed: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, 1, 0],
+            },
+          },
+          pending: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ['$status', 'completed'] },
+                    {
+                      $or: [
+                        { $eq: ['$expiresAt', null] },
+                        { $gte: ['$expiresAt', new Date()] },
+                      ],
+                    },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          overdue: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ['$status', 'completed'] },
+                    { $lt: ['$expiresAt', new Date()] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          department: '$_id',
+          assigned: 1,
+          completed: 1,
+          pending: 1,
+          overdue: 1,
+          completionRate: {
+            $cond: [
+              { $eq: ['$assigned', 0] },
+              '0%',
+              {
+                $concat: [
+                  {
+                    $toString: {
+                      $round: [
+                        {
+                          $multiply: [
+                            { $divide: ['$completed', '$assigned'] },
+                            100,
+                          ],
+                        },
+                        1,
+                      ],
+                    },
+                  },
+                  '%',
+                ],
+              },
+            ],
+          },
+        },
+      },
+      { $sort: { department: 1 } },
+    ]).catch(() => []);
+
     return {
       stats: {
         totalPrograms: totalRecords,
@@ -430,7 +530,7 @@ export const getTrainingReport = async (filters = {}) => {
         overdue,
       },
       assignments: recordList,
-      byDepartment: [],
+      byDepartment: byDept,
     };
   } catch (error) {
     logger.error(`Get training report error: ${error.message}`);

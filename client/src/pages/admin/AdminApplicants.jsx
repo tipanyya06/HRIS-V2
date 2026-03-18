@@ -195,6 +195,36 @@ export default function Applicants() {
     }
   };
 
+  const handleDownloadOfferLetter = async () => {
+    if (!selectedApplicant?._id) return;
+
+    try {
+      const res = await api.get(
+        `/applications/${selectedApplicant._id}/offer-letter`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(
+        new Blob([res.data], { type: 'application/pdf' })
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `offer-letter-${
+        selectedApplicant.fullName ?? selectedApplicant._id
+      }.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setToast({
+        message: 'Offer letter downloaded.',
+        type: 'success',
+      });
+    } catch (err) {
+      setToast({
+        message: 'Offer letter download failed.',
+        type: 'error',
+      });
+    }
+  };
+
   const handleDelete = async (applicant) => {
     if (
       !window.confirm(
@@ -587,6 +617,15 @@ export default function Applicants() {
 
             {/* ACTIONS */}
             <div className="flex gap-2 mt-4 justify-end">
+              {(selectedApplicant?.stage === 'offer' ||
+                selectedApplicant?.stage === 'hired') ? (
+                <button
+                  onClick={handleDownloadOfferLetter}
+                  className="inline-flex items-center gap-2 h-[32px] px-4 bg-[#185FA5] text-white rounded-md text-[12px] font-medium hover:bg-[#0C447C]"
+                >
+                  ↓ Offer Letter
+                </button>
+              ) : null}
               <Button
                 variant="primary"
                 size="sm"

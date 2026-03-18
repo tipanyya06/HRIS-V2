@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Download, Loader } from 'lucide-react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement,
+  LineElement, PointElement, Title, Tooltip, Legend
+);
 
 // Base card component
 const Card = ({ children, className = '' }) => (
@@ -320,6 +337,142 @@ export default function Reports() {
   const avgTenureYears = globalKpi?.avgTenureYears ?? '0.0';
   const openPositionsDeltaClass = closingSoon > 0 ? 'text-red-600' : 'text-gray-400';
 
+  const atsTrendData =
+    (reportData?.atsTrend && reportData.atsTrend.length ? reportData.atsTrend : atsTrend) || [];
+  const hiringTrendData =
+    (reportData?.hiringTrend && reportData.hiringTrend.length ? reportData.hiringTrend : hiringTrend) || [];
+  const headcountByDept = reportData?.byDepartment || [];
+
+  const atsBarData = {
+    labels: atsTrendData.map((d) => d.month),
+    datasets: [
+      {
+        label: 'Applications',
+        data: atsTrendData.map((d) => d.count),
+        backgroundColor: '#BFDBFE',
+        borderColor: '#185FA5',
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+    ],
+  };
+
+  const atsBarOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index' },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          font: { size: 11 },
+        },
+        grid: { color: '#f3f4f6' },
+      },
+      x: {
+        ticks: { font: { size: 11 } },
+        grid: { display: false },
+      },
+    },
+  };
+
+  const hiringLineData = {
+    labels: hiringTrendData.map((d) => d.month),
+    datasets: [
+      {
+        label: 'Hired',
+        data: hiringTrendData.map((d) => d.hired),
+        borderColor: '#22c55e',
+        backgroundColor: '#dcfce7',
+        tension: 0.3,
+        pointRadius: 4,
+      },
+      {
+        label: 'Rejected',
+        data: hiringTrendData.map((d) => d.rejected),
+        borderColor: '#ef4444',
+        backgroundColor: '#fee2e2',
+        tension: 0.3,
+        pointRadius: 4,
+      },
+    ],
+  };
+
+  const hiringLineOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: { font: { size: 11 }, boxWidth: 12 },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          font: { size: 11 },
+        },
+        grid: { color: '#f3f4f6' },
+      },
+      x: {
+        ticks: { font: { size: 11 } },
+        grid: { display: false },
+      },
+    },
+  };
+
+  const headcountBarData = {
+    labels: headcountByDept.map((d) => d.department),
+    datasets: [
+      {
+        label: 'Active',
+        data: headcountByDept.map((d) => d.active),
+        backgroundColor: '#bbf7d0',
+        borderColor: '#22c55e',
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+      {
+        label: 'Inactive',
+        data: headcountByDept.map((d) => d.inactive),
+        backgroundColor: '#fecaca',
+        borderColor: '#ef4444',
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+    ],
+  };
+
+  const headcountBarOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: { font: { size: 11 }, boxWidth: 12 },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          font: { size: 11 },
+        },
+        grid: { color: '#f3f4f6' },
+      },
+      x: {
+        ticks: { font: { size: 11 } },
+        grid: { display: false },
+      },
+    },
+  };
+
   return (
     <div className="w-full px-6 py-5 flex flex-col gap-4">
       {/* ===== SECTION 1: PAGE HEADER ===== */}
@@ -559,6 +712,18 @@ export default function Reports() {
               {/* ATS Trend */}
               <div>
                 <h3 className="text-[14px] font-medium text-[#1a3a5c] mb-4">ATS Trend (Last 12 Months)</h3>
+                {atsTrendData.length > 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                    <p className="text-[12px] font-semibold uppercase tracking-widest text-gray-500 mb-3">
+                      Applications per month
+                    </p>
+                    <Bar
+                      data={atsBarData}
+                      options={atsBarOptions}
+                      height={80}
+                    />
+                  </div>
+                ) : null}
                 {isTrendLoading ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500 py-8">
                     <Loader size={16} className="animate-spin" /> Loading trends...
@@ -593,6 +758,18 @@ export default function Reports() {
               {/* Hiring Trend */}
               <div>
                 <h3 className="text-[14px] font-medium text-[#1a3a5c] mb-4">Hiring Trend (Last 12 Months)</h3>
+                {hiringTrendData.length > 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                    <p className="text-[12px] font-semibold uppercase tracking-widest text-gray-500 mb-3">
+                      Hired vs Rejected per month
+                    </p>
+                    <Line
+                      data={hiringLineData}
+                      options={hiringLineOptions}
+                      height={80}
+                    />
+                  </div>
+                ) : null}
                 {isTrendLoading ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500 py-8">
                     <Loader size={16} className="animate-spin" /> Loading trends...
@@ -663,6 +840,18 @@ export default function Reports() {
             {/* Headcount by Department */}
             <div>
               <h3 className="text-[14px] font-medium text-[#1a3a5c] mb-4">Headcount by Department</h3>
+              {headcountByDept.length > 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                  <p className="text-[12px] font-semibold uppercase tracking-widest text-gray-500 mb-3">
+                    Headcount by department
+                  </p>
+                  <Bar
+                    data={headcountBarData}
+                    options={headcountBarOptions}
+                    height={80}
+                  />
+                </div>
+              ) : null}
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-sm border-collapse">
                   <thead className="bg-gray-50 border-b border-gray-200">

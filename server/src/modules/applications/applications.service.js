@@ -3,6 +3,7 @@ import Job from '../jobs/job.model.js';
 import User from '../auth/user.model.js';
 import InterviewSchedule from '../interviews/interviewSchedule.model.js';
 import { logger } from '../../utils/logger.js';
+import { sendRejectionEmail } from '../../utils/email.js';
 
 const createError = (status, message) => {
   const err = new Error(message);
@@ -407,6 +408,18 @@ export const updateStage = async (
 
     await applicant.save();
     logger.info(`Applicant ${applicantId} moved to ${newStage} stage`);
+
+    // Auto-send rejection email - fire and forget
+    const stage = newStage;
+    if (newStage === 'rejected' || stage === 'rejected') {
+      const job = applicant.jobId
+        ? await Job.findById(applicant.jobId).select('title').lean()
+        : null;
+      sendRejectionEmail(
+        applicant,
+        job?.title ?? 'the position'
+      ).catch((err) => logger.error(`Rejection email error: ${err.message}`));
+    }
 
     return applicant;
   } catch (error) {

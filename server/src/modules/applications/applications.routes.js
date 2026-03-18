@@ -43,6 +43,13 @@ router.patch(
 );
 
 router.get(
+  '/:id/offer-letter',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  applicationController.offerLetterController
+);
+
+router.get(
   '/:id',
   verifyToken,
   requireRole(['admin', 'super-admin', 'hr']),
