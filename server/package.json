@@ -8,6 +8,7 @@
     "dev": "nodemon --watch src --ext js,json --ignore logs/** --delay 300ms src/server.js",
     "start": "node src/server.js",
     "migrate:interviews": "node --experimental-vm-modules src/scripts/migrateInterviews.js",
+    "backfill:encrypt": "node src/scripts/backfillEncryption.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src --ext .js"

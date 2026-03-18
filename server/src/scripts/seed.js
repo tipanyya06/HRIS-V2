@@ -54,6 +54,8 @@ async function runSeed() {
       console.log('✓ Admin user already exists, password reset to: Admin123456');
     }
 
+    // SEED ONLY - Employee model reference kept for legacy seed compatibility.
+    // Do NOT import Employee in any runtime service file. Use User model with role filter.
     // Ensure legacy Employee admin also exists for modules still referencing Employee.
     // This keeps compatibility while auth now uses User.
     const { default: Employee } = await import('../modules/employees/employee.model.js');
@@ -73,6 +75,8 @@ async function runSeed() {
       await legacyAdmin.save();
       console.log('✓ Created legacy employee admin for compatibility');
     }
+    // TODO Phase 1: migrate seed to create User only,
+    // remove Employee creation after migration verified.
 
     // 2. Create sample jobs
     const jobs = [

@@ -1,5 +1,30 @@
 # Backend Development Guide
 
+## Phase 0 Stabilization Rules (Must Follow)
+
+### Source of Truth Policy
+
+- User is the single source of truth for identity, profile, government IDs, and payroll account data.
+- Runtime service files must query User with role filters.
+- Employee model is legacy/extension-only and must not be imported in runtime services.
+- Employee model may be referenced in seed scripts for compatibility only.
+
+### Canonical Field Names
+
+Use these exact keys across backend modules:
+
+- governmentIds.philhealth
+- emergencyContact.contact
+
+Do not introduce alternate spellings (for example, philHealth or emergencyContact.phone).
+
+### Encryption Migration Status
+
+- Model-level encryption hooks are active in user.model.js.
+- One-time backfill has been executed and archived at:
+  - src/scripts/archive/backfillEncryption.done.js
+- Do not re-run backfill unless a new migration window is explicitly planned.
+
 ## Quick Setup
 
 ```bash
@@ -91,6 +116,19 @@ export const errorHandler = (err, req, res, next) => {
 };
 ```
 
+### Response Contract Pattern
+
+Keep API contracts stable and frontend-safe.
+
+```javascript
+return res.status(200).json({
+  success: true,
+  data,
+});
+```
+
+For failures, return string errors or pass to next(error) from controllers.
+
 ---
 
 ## Testing
@@ -134,15 +172,16 @@ describe('GET /api/jobs', () => {
 
 ### Encrypt Sensitive Fields
 ```javascript
-import { encrypt, decrypt } from '../../utils/encrypt.js';
+import { encrypt } from '../../utils/encrypt.js';
 
-// In model getter/setter
-phone: {
-  type: String,
-  set: (val) => val ? encrypt(val) : val,
-  get: (val) => val ? decrypt(val) : val,
+const isEncrypted = (value) => typeof value === 'string' && value.includes(':');
+
+if (this.isModified('governmentIds.sss') && this.governmentIds?.sss && !isEncrypted(this.governmentIds.sss)) {
+  this.governmentIds.sss = encrypt(this.governmentIds.sss);
 }
 ```
+
+Always guard against double-encryption when updating existing rows.
 
 ### JWT Token
 ```javascript
@@ -233,6 +272,21 @@ requiredVars.forEach(v => {
 5. Create `feature.routes.js` (endpoints)
 6. Import routes in `server.js`
 
+### Add Service Query Safely (User-first)
+
+1. Import User model from modules/auth/user.model.js
+2. Add role filter to every query when targeting employees/admins/applicants
+3. Preserve canonical field names for sensitive paths
+4. Ensure responses follow `{ success, data }` pattern
+
+Example:
+
+```javascript
+const employees = await User.find({ role: 'employee', isActive: true })
+  .select('-password')
+  .lean();
+```
+
 ### Debug a Route
 
 1. Add breakpoint in controller
@@ -245,6 +299,15 @@ requiredVars.forEach(v => {
 Use MongoDB Compass — connect to your local MongoDB:
 ```
 mongodb://localhost:27017/hris_v2_dev
+```
+
+### Verify Canonical Sensitive Keys
+
+Use case-sensitive search before merging model changes:
+
+```powershell
+Get-ChildItem -Path server/src -Recurse -File |
+  Select-String -Pattern 'philHealth','philhealth','emergencyContact\.phone','emergencyContact\.contact' -CaseSensitive
 ```
 
 ---

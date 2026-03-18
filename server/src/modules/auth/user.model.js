@@ -2,6 +2,23 @@ import mongoose from 'mongoose';
 import bcryptjs from 'bcryptjs';
 import { encrypt } from '../../utils/encrypt.js';
 
+/**
+ * MODEL POLICY - Madison 88 HRIS
+ *
+ * User is the SINGLE source of truth for all identity,
+ * profile, government IDs, and payroll account data.
+ *
+ * Rules:
+ * - All auth/reports/profile queries -> User model only
+ * - Employee model (if it exists) -> extension-only
+ *   stores: jobHistory, promotions, disciplinary records
+ *   NEVER duplicates: personalInfo, govIds, payroll
+ * - seed.js may reference Employee for legacy seeding only
+ *   - never import Employee in runtime service files
+ * - Always use User.sanitizeUser() before sending to client
+ * - Always use .select('+password') only in auth flows
+ */
+
 const encryptedFieldRegex = /^[a-f0-9]{32}:[a-f0-9]+$/i;
 
 const shouldEncrypt = (value) => {
@@ -54,7 +71,17 @@ const userSchema = new mongoose.Schema(
     positionTitle: String,
     department: String,
     directSupervisor: String,
+    reportsTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     companyName: String,
+    source: {
+      type: String,
+      enum: ['Direct', 'PESO', 'Referral', 'LinkedIn', 'JobStreet', 'Other', ''],
+      default: 'Direct',
+    },
 
     // Personal Info
     personalInfo: {
@@ -134,6 +161,7 @@ const userSchema = new mongoose.Schema(
     payrollInfo: {
       bankName: String,
       accountNumber: String,
+      basicSalary: String,
       accountName: String,
     },
 
@@ -184,6 +212,7 @@ userSchema.pre('save', async function preSave(next) {
       'governmentIds.pagIbig',
       'governmentIds.philhealth',
       'payrollInfo.accountNumber',
+      'payrollInfo.basicSalary',
     ];
 
     for (const path of encryptedPaths) {

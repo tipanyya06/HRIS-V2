@@ -1,25 +1,18 @@
 import React from 'react';
-import { Card, PageHeader } from '../../components/ui';
-
-const docs = [
-  { name: 'Employment Contract', status: 'Available' },
-  { name: 'Company Handbook', status: 'Available' },
-  { name: 'Tax Declaration', status: 'Pending Upload' },
-];
 
 export default function Documents() {
   return (
-    <div>
-      <PageHeader title="My Documents" subtitle="Access your HR and compliance files" />
-      <div className="space-y-3">
-        {docs.map((doc) => (
-          <Card key={doc.name} className="border border-slate-200">
-            <div className="flex items-center justify-between">
-              <p className="font-medium text-slate-900">{doc.name}</p>
-              <span className="text-sm text-slate-500">{doc.status}</span>
-            </div>
-          </Card>
-        ))}
+    <div className="w-full px-6 py-5 flex flex-col gap-4">
+      <div>
+        <h1 className="text-[20px] font-semibold text-[#1a3a5c]">My Documents</h1>
+        <p className="text-[13px] text-gray-500 mt-0.5">View and download your employment documents.</p>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-lg p-12 flex flex-col items-center justify-center text-center gap-3">
+        <div className="text-[32px]">Documents</div>
+        <p className="text-[14px] font-medium text-[#1a3a5c]">Documents coming soon</p>
+        <p className="text-[13px] text-gray-500 max-w-sm">
+          Your contracts, clearances, and employment documents will be accessible here once your HR team uploads them.
+        </p>
       </div>
     </div>
   );
