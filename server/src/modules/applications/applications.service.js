@@ -274,7 +274,9 @@ export const updateStage = async (
     // If hired, mark as employee and remove TTL
     if (newStage === 'hired') {
       // Pre-employment gate — mirrors hireApplicant() validation
-      const linkedUser = await User.findOne({ email: applicant.email });
+      const linkedUser = applicant.userId
+        ? await User.findById(applicant.userId)
+        : await User.findOne({ email: applicant.email });
       if (!linkedUser)
         throw createError(
           404,
@@ -299,18 +301,62 @@ export const updateStage = async (
       applicant.isEmployee = true;
       applicant.deletedAt = undefined; // Removes TTL
 
-      // Try to activate the corresponding user account if it exists
-      // Use case-insensitive regex match
-      const user = await User.findOne({
-        email: { $regex: new RegExp(`^${applicant.email}$`, 'i') },
-      });
-      if (user) {
-        await User.findByIdAndUpdate(user._id, {
+      // Try userId first (most reliable)
+      let userToActivate = applicant.userId
+        ? await User.findById(applicant.userId)
+        : null
+
+      // Fallback to email lookup (case-insensitive)
+      if (!userToActivate) {
+        userToActivate = await User.findOne({
+          email: {
+            $regex: new RegExp(`^${applicant.email}$`, 'i')
+          }
+        })
+      }
+
+      // If still no user — create one for guest applicants
+      if (!userToActivate) {
+        const tempPassword =
+          Math.random().toString(36).slice(-8) +
+          Math.random().toString(36).slice(-4).toUpperCase() +
+          '!8'
+
+        userToActivate = await User.create({
+          email: applicant.email,
+          password: tempPassword,
+          role: 'employee',
+          isVerified: true,
+          isActive: true,
+          status: 'active',
+          personalInfo: {
+            fullName: applicant.fullName ?? '',
+            firstName: applicant.fullName
+              ?.split(' ')[0] ?? '',
+            lastName: applicant.fullName
+              ?.split(' ').slice(1).join(' ') ?? '',
+          },
+        })
+
+        logger.info(
+          `New User created for guest applicant: ${applicant.email}`
+        )
+      } else {
+        // Activate existing user
+        await User.findByIdAndUpdate(userToActivate._id, {
           isVerified: true,
           isActive: true,
           role: 'employee',
-        });
-        logger.info(`User account activated for applicant ${applicant.email}`);
+          status: 'active',
+        })
+      }
+
+      // Link applicant.userId to the activated user
+      if (!applicant.userId) {
+        await Applicant.findByIdAndUpdate(
+          applicant._id,
+          { userId: userToActivate._id }
+        )
       }
 
       // ════════════════════════════════════════
