@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  BarChart3,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,6 +22,7 @@ const navigationItems = [
   { label: 'Announcements', path: '/employee/announcements', icon: Bell },
   { label: 'Contact HR', path: '/employee/contact-hr', icon: MessageSquare },
   { label: 'Training', path: '/employee/training', icon: GraduationCap },
+  { label: 'Performance', path: '/employee/performance', icon: BarChart3 },
 ];
 
 export default function EmployeeLayout() {

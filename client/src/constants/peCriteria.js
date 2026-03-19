@@ -1,0 +1,146 @@
+export const PE_CRITERIA = {
+  productivity: {
+    label: 'Productivity',
+    description: 'Ability to meet the desired output',
+    max: 20,
+    options: [
+      { score: 20, grade: 'S',
+        text: 'Work output is consistently beyond the requirements' },
+      { score: 18, grade: 'A',
+        text: 'Work output exceeds the requirements most of the time' },
+      { score: 17, grade: 'B',
+        text: 'Work output is consistently met' },
+      { score: 15, grade: 'C',
+        text: 'Work output is sometimes met' },
+      { score: 12, grade: 'D',
+        text: 'Work quantity is partially sufficient' },
+      { score: 10, grade: 'E',
+        text: 'Work output is often below what is expected' },
+    ]
+  },
+  quality: {
+    label: 'Quality',
+    description: 'Ability to meet job requirements per quality standard',
+    max: 20,
+    options: [
+      { score: 20, grade: 'S',
+        text: 'Outstanding performance. Performs job with ingenuity to improve quality' },
+      { score: 18, grade: 'A',
+        text: 'Quality of work exceeds requirements. Practice communication/consult to avoid making NG' },
+      { score: 17, grade: 'B',
+        text: 'Quality of work is consistently satisfactory' },
+      { score: 15, grade: 'C',
+        text: 'Quality of work is frequently satisfactory' },
+      { score: 12, grade: 'D',
+        text: 'Quality of work is improved after coaching of superior' },
+      { score: 10, grade: 'E',
+        text: 'Quality of work is below normal despite repeated coaching sessions' },
+    ]
+  },
+  mvvEmbrace: {
+    label: 'MVV Embrace',
+    description: "Ability to live by the Company's Mission, Vision, Values",
+    max: 10,
+    options: [
+      { score: 10, grade: 'S',
+        text: "Shows the ability to live by the Company's MVV in the performance of his/her job all the time, not just knowing how to recite them" },
+      { score: 9, grade: 'A',
+        text: "Shows the ability to live by the Company's MVV in the performance of his/her job most of the time, not just knowing how to recite them" },
+      { score: 8, grade: 'B',
+        text: "Shows the ability to live by the Company's MVV in the performance of his/her job sometimes, not just knowing how to recite them" },
+      { score: 5, grade: 'C',
+        text: "Can only recite the MVV without showing the ability to live by the MVV in the performance of his/her job, or vice versa" },
+      { score: 0, grade: 'E',
+        text: "Can neither live by the MVV in the performance of his/her job nor recite them" },
+    ]
+  },
+  initiative: {
+    label: 'Initiative / Creativity / Knowledge',
+    description: 'Self-starter with contributions and participation',
+    max: 10,
+    options: [
+      { score: 10, grade: 'S',
+        text: 'A self-starter with exceptional initiative. Contributed 6 suggestions that resulted in Quality & Efficiency and reduction of Costs' },
+      { score: 9, grade: 'A',
+        text: 'A self-starter with exceptional initiative. Contributed at least 4 suggestions. Actively participates in Company activities' },
+      { score: 8, grade: 'B',
+        text: 'Does work without waiting to be told. Contributed at least 2 suggestions for the rating period' },
+      { score: 7, grade: 'C',
+        text: 'Does work without waiting to be told. Contributed 1 suggestion for the rating period' },
+      { score: 6, grade: 'D',
+        text: 'Waits for instructions to improve his/her work' },
+      { score: 5, grade: 'E',
+        text: 'Has not improved his/her work within the rating period' },
+    ]
+  },
+  attendance: {
+    label: 'Attendance & Punctuality',
+    description: 'Absences and tardiness record for the rating period',
+    max: 18,
+    supervisorOnly: true,
+    options: [
+      { score: 18, grade: 'S',
+        text: 'Punctual in observance of work hours, break periods. No tardiness, no absence' },
+      { score: 16, grade: 'A',
+        text: 'Has 1 to 2 absences and/or 0 to 2 tardiness per month within the rating period' },
+      { score: 14, grade: 'B',
+        text: 'Has 3 to 4 absences and/or 0 to 3 tardiness per month for the entire rating period' },
+      { score: 10, grade: 'C',
+        text: 'Has 5 absences and/or 0 to 5 tardiness for the entire rating period' },
+      { score: 6, grade: 'D',
+        text: 'Has 6 absences and/or 0 to 6 tardiness for the entire rating period' },
+      { score: 4, grade: 'E',
+        text: 'Frequently absent and late for work' },
+    ]
+  },
+  adherenceCRR: {
+    label: 'Adherence to CR&R',
+    description: 'Follows company rules and regulations',
+    max: 12,
+    supervisorOnly: true,
+    options: [
+      { score: 12, grade: 'S',
+        text: 'Follows company rules consistently. He/she influences peers to follow the CRR' },
+      { score: 11, grade: 'A',
+        text: 'Follows company rules. No Disciplinary Action' },
+      { score: 8, grade: 'B',
+        text: 'Follows company rules. Has committed only a verbal warning' },
+      { score: 7, grade: 'C',
+        text: 'Follows company rules. Has committed only a written reprimand' },
+      { score: 5, grade: 'D',
+        text: 'Has been suspended for breaking the CRR during the rating period (1 time)' },
+      { score: 1, grade: 'E',
+        text: 'Has been suspended for breaking the CRR during the rating period (2 or more times)' },
+    ]
+  },
+  humanRelations: {
+    label: 'Human Relations',
+    description: 'Camaraderie and teamwork with co-employees',
+    max: 10,
+    options: [
+      { score: 10, grade: 'S',
+        text: 'Outstanding camaraderie. Well-liked by co-employees and superiors' },
+      { score: 9, grade: 'A',
+        text: 'Fits easily with the group. Liked by co-employees and superiors' },
+      { score: 8, grade: 'B',
+        text: 'Supports fellow employees & subordinates' },
+      { score: 7, grade: 'C',
+        text: 'Has difficulty in dealing with others. Sometimes arouses resentment' },
+      { score: 6, grade: 'D',
+        text: 'Does not get along with others. Quarrelsome' },
+      { score: 5, grade: 'E',
+        text: 'Has been reprimanded for insubordination and offense against persons' },
+    ]
+  },
+}
+
+export const FACTOR_KEYS = Object.keys(PE_CRITERIA)
+
+export const GRADE_COLORS = {
+  S: { bg: '#f3e8ff', text: '#7c3aed', border: '#ddd6fe' },
+  A: { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
+  B: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
+  C: { bg: '#fef3c7', text: '#b45309', border: '#fde68a' },
+  D: { bg: '#fed7aa', text: '#c2410c', border: '#fdba74' },
+  E: { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' },
+}

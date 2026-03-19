@@ -48,6 +48,7 @@ export default function AdminLayout() {
   const workforceItems = [
     { path: '/admin/employees', label: 'Employees', icon: Users },
     { path: '/admin/training', label: 'Training', icon: BookOpen },
+    { path: '/admin/performance', label: 'Performance', icon: BarChart3 },
   ];
 
   const adminItems = [

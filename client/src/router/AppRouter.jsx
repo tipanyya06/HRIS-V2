@@ -32,6 +32,7 @@ import AdminList from '../pages/admin/AdminList';
 import ActivityLogs from '../pages/admin/AdminActivityLogs';
 import AdminRequests from '../pages/admin/AdminRequests';
 import AdminPreEmployment from '../pages/admin/AdminPreEmployment';
+import AdminPerformance from '../pages/admin/AdminPerformance';
 
 // Pages - Employee
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
@@ -49,6 +50,7 @@ import SavedJobs from '../pages/applicant/ApplicantSavedJobs';
 import ApplicantInterviews from '../pages/applicant/ApplicantInterviews';
 import ApplicantPreEmployment from '../pages/applicant/ApplicantPreEmployment';
 import PendingApproval from '../pages/auth/PendingApproval';
+import EmployeePerformance from '../pages/employee/EmployeePerformance';
 
 // Protect routes by auth + role.
 const PrivateRoute = ({ children, roles }) => {
@@ -162,6 +164,7 @@ export default function AppRouter() {
           <Route path="employees" element={<Employees />} />
           <Route path="interviews" element={<Interviews />} />
           <Route path="training" element={<Training />} />
+          <Route path="performance" element={<AdminPerformance />} />
           <Route path="reports" element={<Reports />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="admins" element={<AdminList />} />
@@ -186,6 +189,7 @@ export default function AppRouter() {
           <Route path="contact-hr" element={<EmployeeContactHR />} />
           <Route path="documents" element={<EmployeeDocuments />} />
           <Route path="training" element={<EmployeeTraining />} />
+          <Route path="performance" element={<EmployeePerformance />} />
         </Route>
 
         {/* Catch all - must be last */}
