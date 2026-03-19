@@ -1,6 +1,8 @@
 import * as requestService from './requests.service.js';
 import { createNotification } from '../notifications/notification.service.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 import { logger } from '../../utils/logger.js';
+import User from '../auth/user.model.js';
 
 export const createRequestController = async (req, res, next) => {
   try {
@@ -24,6 +26,31 @@ export const createRequestController = async (req, res, next) => {
     } catch (notifErr) {
       logger.error('Notification error:', notifErr);
     }
+
+    logActivity(req, `Request submitted: ${request.type ?? request.subject ?? request._id}`, 'request', request._id);
+
+    // Notify all admins and HR when employee submits request
+    User.find({
+      role: { $in: ['admin', 'super-admin', 'hr'] }
+    }).select('_id').lean()
+      .then(admins =>
+        Promise.allSettled(
+          admins.map(admin =>
+            createNotification(
+              admin._id,
+              'request_submitted',
+              'New Request Submitted',
+              `New ${request.type ?? 'request'} submitted by ${req.user?.email ?? 'employee'}`,
+              '/admin/requests'
+            )
+          )
+        )
+      )
+      .catch(err =>
+        logger.error(
+          `Request admin notification error: ${err.message}`
+        )
+      )
 
     res.status(201).json({ success: true, data: request });
   } catch (error) {
@@ -71,6 +98,8 @@ export const updateRequestStatusController = async (req, res, next) => {
     } catch (notifErr) {
       logger.error('Notification error:', notifErr);
     }
+
+    logActivity(req, `Request ${status}: ${updated.type ?? updated._id}`, 'request', id);
 
     res.status(200).json({ success: true, data: updated });
   } catch (error) {

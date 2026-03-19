@@ -1,5 +1,6 @@
 import * as interviewService from './interviews.service.js';
 import { createNotification } from '../notifications/notification.service.js';
+import { logActivity } from '../../middleware/activityLogger.js';
 import { logger } from '../../utils/logger.js';
 import Applicant from '../applications/applicant.model.js';
 import InterviewSchedule from './interview.model.js';
@@ -59,6 +60,8 @@ export const createInterviewController = async (req, res, next) => {
       logger.error('Notification error:', notifErr);
     }
 
+    logActivity(req, `Interview scheduled for: ${interview.candidateName ?? interview._id}`, 'interview', interview._id);
+
     res.status(201).json({
       success: true,
       message: 'Interview booked successfully',
@@ -89,6 +92,8 @@ export const updateInterviewStatusController = async (req, res, next) => {
     }
 
     const interview = await interviewService.updateInterviewStatus(id, status);
+
+    logActivity(req, `Interview status changed to ${status}: ${id}`, 'interview', id);
 
     res.status(200).json({
       success: true,

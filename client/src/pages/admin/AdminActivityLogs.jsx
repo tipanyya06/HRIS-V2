@@ -31,28 +31,41 @@ export default function ActivityLogs() {
 
   const getActionBadge = (action) => {
     const map = {
-      CREATE: { label: 'Create', class: 'bg-green-100 text-green-700' },
-      UPDATE: { label: 'Update', class: 'bg-blue-100 text-blue-700' },
-      DELETE: { label: 'Delete', class: 'bg-red-100 text-red-700' },
-      LOGIN: { label: 'Login', class: 'bg-purple-100 text-purple-700' },
-      LOGOUT: { label: 'Logout', class: 'bg-gray-100 text-gray-600' },
-      ACTIVATE: { label: 'Activate', class: 'bg-teal-100 text-teal-700' },
-      DEACTIVATE: { label: 'Deactivate', class: 'bg-orange-100 text-orange-700' },
-      TERMINATE: { label: 'Terminate', class: 'bg-red-100 text-red-800' },
-      STAGE_CHANGE: { label: 'Stage Change', class: 'bg-yellow-100 text-yellow-700' },
+      LOGIN: { label: 'Login', class: 'bg-green-50 text-green-700 border border-green-200' },
+      LOGOUT: { label: 'Logout', class: 'bg-gray-100 text-gray-500 border border-gray-200' },
+      CREATE: { label: 'Create', class: 'bg-blue-50 text-blue-700 border border-blue-200' },
+      UPDATE: { label: 'Update', class: 'bg-amber-50 text-amber-700 border border-amber-200' },
+      DELETE: { label: 'Delete', class: 'bg-red-50 text-red-700 border border-red-200' },
+      ACTIVATE: { label: 'Activate', class: 'bg-green-50 text-green-700 border border-green-200' },
+      DEACTIVATE: { label: 'Deactivate', class: 'bg-orange-50 text-orange-700 border border-orange-200' },
+      TERMINATE: { label: 'Terminate', class: 'bg-red-50 text-red-700 border border-red-200' },
+      STATUS_CHANGE: { label: 'Status Change', class: 'bg-purple-50 text-purple-700 border border-purple-200' },
+      STAGE_CHANGE: { label: 'Stage Change', class: 'bg-indigo-50 text-indigo-700 border border-indigo-200' },
+      HIRE: { label: 'Hire', class: 'bg-teal-50 text-teal-700 border border-teal-200' },
+      NOTE_ADDED: { label: 'Note Added', class: 'bg-cyan-50 text-cyan-700 border border-cyan-200' },
+      UPLOAD: { label: 'Upload', class: 'bg-violet-50 text-violet-700 border border-violet-200' },
+      EXPORT: { label: 'Export', class: 'bg-slate-50 text-slate-700 border border-slate-200' },
+      GENERATE: { label: 'Generate', class: 'bg-pink-50 text-pink-700 border border-pink-200' },
     };
-    return map[action] || { label: action, class: 'bg-gray-100 text-gray-600' };
+    return map[action] || { label: action, class: 'bg-gray-100 text-gray-500 border border-gray-200' };
   };
 
   const getResourceBadge = (resource) => {
-    const map = {
-      employee: 'bg-blue-50 text-blue-600',
-      admin: 'bg-purple-50 text-purple-600',
-      job: 'bg-green-50 text-green-600',
-      application: 'bg-yellow-50 text-yellow-600',
-      interview: 'bg-teal-50 text-teal-600',
+    const colors = {
+      auth: 'bg-gray-100 text-gray-600 border-gray-200',
+      employee: 'bg-blue-50 text-blue-700 border-blue-200',
+      admin: 'bg-purple-50 text-purple-700 border-purple-200',
+      job: 'bg-teal-50 text-teal-700 border-teal-200',
+      applicant: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+      interview: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      'pre-employment': 'bg-orange-50 text-orange-700 border-orange-200',
+      request: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      announcement: 'bg-pink-50 text-pink-700 border-pink-200',
+      training: 'bg-green-50 text-green-700 border-green-200',
+      performance: 'bg-violet-50 text-violet-700 border-violet-200',
+      report: 'bg-slate-50 text-slate-700 border-slate-200',
     };
-    return map[resource] || 'bg-gray-50 text-gray-500';
+    return colors[resource] ?? 'bg-gray-100 text-gray-500 border-gray-200';
   };
 
   const formatDate = (dateStr) => {
@@ -152,8 +165,22 @@ export default function ActivityLogs() {
       label: 'User',
       render: (row) => (
         <div>
-          <div className="text-sm font-medium text-gray-900">{row.userEmail || 'system'}</div>
-          <div className="text-xs text-gray-400 capitalize">{row.userRole || '-'}</div>
+          <p className="text-[13px] font-medium text-[#1a3a5c]">{
+            row.userEmail ?? 'system'
+          }</p>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border mt-0.5 ${
+            row.userRole === 'super-admin'
+              ? 'bg-purple-50 text-purple-700 border-purple-200'
+              : row.userRole === 'admin'
+              ? 'bg-blue-50 text-blue-700 border-blue-200'
+              : row.userRole === 'hr'
+              ? 'bg-teal-50 text-teal-700 border-teal-200'
+              : row.userRole === 'employee'
+              ? 'bg-green-50 text-green-700 border-green-200'
+              : 'bg-gray-100 text-gray-500 border-gray-200'
+          }`}>
+            {row.userRole ?? 'system'}
+          </span>
         </div>
       ),
     },
@@ -163,9 +190,7 @@ export default function ActivityLogs() {
       render: (row) => {
         const badge = getActionBadge(row.action);
         return (
-          <span
-            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${badge.class}`}
-          >
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${badge.class}`}>
             {badge.label}
           </span>
         );
@@ -174,13 +199,14 @@ export default function ActivityLogs() {
     {
       key: 'resource',
       label: 'Resource',
-      render: (row) => (
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${getResourceBadge(row.resource)}`}
-        >
-          {row.resource || '-'}
-        </span>
-      ),
+      render: (row) => {
+        const style = getResourceBadge(row.resource);
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${style}`}>
+            {row.resource ?? '—'}
+          </span>
+        );
+      },
     },
     {
       key: 'details',
@@ -257,11 +283,18 @@ export default function ActivityLogs() {
           className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
           <option value="all">All Resources</option>
+          <option value="auth">Auth</option>
           <option value="employee">Employee</option>
           <option value="admin">Admin</option>
           <option value="job">Job</option>
-          <option value="application">Application</option>
+          <option value="applicant">Applicant</option>
           <option value="interview">Interview</option>
+          <option value="pre-employment">Pre-Employment</option>
+          <option value="request">Request</option>
+          <option value="announcement">Announcement</option>
+          <option value="training">Training</option>
+          <option value="performance">Performance</option>
+          <option value="report">Report</option>
         </select>
 
         <select
@@ -273,14 +306,21 @@ export default function ActivityLogs() {
           className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
           <option value="all">All Actions</option>
+          <option value="LOGIN">Login</option>
+          <option value="LOGOUT">Logout</option>
           <option value="CREATE">Create</option>
           <option value="UPDATE">Update</option>
           <option value="DELETE">Delete</option>
           <option value="ACTIVATE">Activate</option>
           <option value="DEACTIVATE">Deactivate</option>
           <option value="TERMINATE">Terminate</option>
-          <option value="LOGIN">Login</option>
+          <option value="STATUS_CHANGE">Status Change</option>
           <option value="STAGE_CHANGE">Stage Change</option>
+          <option value="HIRE">Hire</option>
+          <option value="NOTE_ADDED">Note Added</option>
+          <option value="UPLOAD">Upload</option>
+          <option value="EXPORT">Export</option>
+          <option value="GENERATE">Generate</option>
         </select>
 
         <input

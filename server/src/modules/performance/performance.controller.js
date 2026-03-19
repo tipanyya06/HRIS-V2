@@ -8,6 +8,8 @@ import {
   getMyPerformanceEvaluations,
   getPerformanceEvaluationById,
 } from './performance.service.js'
+import { createNotification } from
+  '../notifications/notification.service.js'
 import { logger } from '../../utils/logger.js'
 import { logActivity } from '../../middleware/activityLogger.js'
 
@@ -56,6 +58,25 @@ export const selfRatingController =
       const pe = await submitSelfRating(
         id, scores, employeeComment, factorComments, userId
       )
+
+      // Notify evaluator/supervisor
+      createNotification(
+        pe.evaluatorId,
+        'pe_self_rated',
+        'Employee Self-Rating Submitted',
+        `An employee has completed their self-rating. You can now submit the supervisor rating.`,
+        '/admin/performance'
+      ).catch(err =>
+        logger.error(`PE self-rated notif error: ${err.message}`)
+      )
+
+      logActivity(
+        req,
+        `Employee submitted self-rating for PE: ${id}`,
+        'performance',
+        id
+      )
+
       res.status(200).json({ success: true, data: pe })
     } catch (error) {
       next(error)
@@ -93,6 +114,14 @@ export const acknowledgePEController =
       const { id } = req.params
       const userId = req.user.id
       const pe = await acknowledgePE(id, userId)
+
+      logActivity(
+        req,
+        `Employee acknowledged PE: ${id}`,
+        'performance',
+        id
+      )
+
       res.status(200).json({ success: true, data: pe })
     } catch (error) {
       next(error)

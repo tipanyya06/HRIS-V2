@@ -3,6 +3,7 @@ import User from '../auth/user.model.js'
 import { logger } from '../../utils/logger.js'
 import { paginate } from '../../utils/paginate.js'
 import { sendEmail } from '../../utils/email.js'
+import { createNotification } from '../notifications/notification.service.js'
 
 const computeGrade = (total) => {
   if (total >= 100) return 'S'
@@ -20,6 +21,7 @@ const meetsStandardPass = (rating, classification) => {
   }
   return ['S', 'A', 'B'].includes(rating)
 }
+
 
 const suggestDisposition = (rating, evalType) => {
   if (rating === 'E') return 'fail'
@@ -80,6 +82,19 @@ export const createPerformanceEvaluation = async (data) => {
       )
     )
 
+    // Fire-and-forget in-app notification (silent fail)
+    createNotification(
+      pe.employeeId,
+      'pe_created',
+      'Performance Evaluation Ready',
+      `Your ${pe.evaluationType} performance evaluation is ready. Please submit your self-rating.`,
+      '/employee/performance'
+    ).catch(err =>
+      logger.error(
+        `PE created notif error: ${err.message}`
+      )
+    )
+
     logger.info(
       `PE created for employee ${employeeId} by admin ${adminId}`
     )
@@ -125,6 +140,45 @@ export const submitSelfRating = async (
     pe.factorComments = factorComments ?? {}
     pe.status = 'supervisor-rating'
     await pe.save()
+
+    // Notify supervisor/evaluator that employee submitted self-rating
+    if (pe.evaluatorId) {
+      createNotification(
+        pe.evaluatorId,
+        'pe_self_rated',
+        'Employee Self-Rating Submitted',
+        `Employee has submitted self-rating for ${pe.evaluationType} evaluation. Please complete the supervisor rating.`,
+        '/admin/performance'
+      ).catch(err =>
+        logger.error(`PE self-rated notif error: ${err.message}`)
+      )
+    }
+
+    // Also notify all admins and HR
+    const adminFilter = {
+      role: { $in: ['admin', 'super-admin', 'hr'] },
+    }
+    if (pe.evaluatorId) {
+      adminFilter._id = { $ne: pe.evaluatorId }
+    }
+
+    User.find(adminFilter).select('_id').lean()
+      .then(admins =>
+        Promise.allSettled(
+          admins.map(a =>
+            createNotification(
+              a._id,
+              'pe_self_rated',
+              'Employee Self-Rating Submitted',
+              `An employee has submitted their self-rating. Please complete the supervisor rating.`,
+              '/admin/performance'
+            )
+          )
+        )
+      )
+      .catch(err =>
+        logger.error(`PE self-rated bulk notif error: ${err.message}`)
+      )
 
     logger.info(`Self-rating submitted for PE ${peId}`)
     return pe
@@ -181,6 +235,17 @@ export const submitSupervisorRating = async (
     pe.status = 'completed'
     await pe.save()
 
+    // Fire-and-forget in-app notification (silent fail)
+    createNotification(
+      pe.employeeId,
+      'pe_completed',
+      'Performance Evaluation Completed',
+      `Your performance evaluation is complete. Score: ${total} — Grade: ${pe.overallRating}. Please acknowledge.`,
+      '/employee/performance'
+    ).catch(err =>
+      logger.error(`PE completed notif error: ${err.message}`)
+    )
+
     logger.info(
       `Supervisor rating submitted for PE ${peId}. Score: ${total} Rating: ${pe.overallRating}`
     )
@@ -214,6 +279,29 @@ export const acknowledgePE = async (peId, userId) => {
     pe.acknowledgedAt = new Date()
     pe.acknowledgedBy = userId
     await pe.save()
+
+    // Notify all admins, super-admins, and HR
+    User.find({
+      role: { $in: ['admin', 'super-admin', 'hr'] }
+    }).select('_id').lean()
+      .then(admins =>
+        Promise.allSettled(
+          admins.map(a =>
+            createNotification(
+              a._id,
+              'pe_completed',
+              'Performance Evaluation Acknowledged',
+              `An employee has acknowledged their performance evaluation.`,
+              '/admin/performance'
+            )
+          )
+        )
+      )
+      .catch(err =>
+        logger.error(
+          `PE acknowledge bulk notification error: ${err.message}`
+        )
+      )
 
     logger.info(`PE ${peId} acknowledged by ${userId}`)
     return pe

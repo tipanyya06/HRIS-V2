@@ -19,6 +19,7 @@ export default function AdminPerformance() {
   const [showSelfRatingModal, setShowSelfRatingModal] = useState(false);
   const [selectedPE, setSelectedPE] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [evaluators, setEvaluators] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -92,12 +93,25 @@ export default function AdminPerformance() {
     }
   };
 
+  const fetchEvaluators = async () => {
+    try {
+      const res = await api.get('/admins/evaluators')
+      setEvaluators(res.data?.data ?? [])
+    } catch {
+      setEvaluators([])
+    }
+  };
+
   useEffect(() => {
     fetchPEs();
   }, [page, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchEmployees();
+  }, []);
+
+  useEffect(() => {
+    fetchEvaluators();
   }, []);
 
   const handleCreatePE = async () => {
@@ -468,17 +482,24 @@ export default function AdminPerformance() {
             </label>
             <select
               value={createForm.evaluatorId}
-              onChange={(e) =>
-                setCreateForm({ ...createForm, evaluatorId: e.target.value })
-              }
-              className="w-full h-[32px] mt-1 px-3 border border-gray-200 rounded-md text-[13px] focus:outline-none focus:ring-1 focus:ring-[#185FA5]"
+              onChange={e => setCreateForm(f => ({
+                ...f, evaluatorId: e.target.value
+              }))}
+              className="w-full h-[36px] px-3 border border-gray-200 rounded-md text-[13px] text-gray-700 bg-white outline-none focus:border-[#185FA5]"
             >
               <option value="">Select evaluator</option>
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.personalInfo?.fullName ?? emp.email}
-                </option>
-              ))}
+              {evaluators.map(ev => {
+                const name =
+                  ev.personalInfo?.fullName?.trim() ||
+                  `${ev.personalInfo?.firstName ?? ''} ${ev.personalInfo?.lastName ?? ''}`.trim() ||
+                  ev.email ||
+                  'Unknown'
+                return (
+                  <option key={ev._id} value={ev._id}>
+                    {name} ({ev.role})
+                  </option>
+                )
+              })}
             </select>
           </div>
 

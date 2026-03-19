@@ -1,3 +1,4 @@
+import { logActivity } from '../../middleware/activityLogger.js';
 import {
   getMyChecklist,
   submitChecklistItem,
@@ -23,6 +24,8 @@ export const submitPreEmploymentItemController = async (req, res, next) => {
       originalName,
     });
 
+    logActivity(req, `Pre-employment document submitted: ${itemKey} - ${originalName}`, 'pre-employment', req.user.id);
+
     res.status(200).json({ success: true, data: record });
   } catch (error) {
     next(error);
@@ -43,6 +46,7 @@ export const reviewPreEmploymentItemController = async (req, res, next) => {
     const { id, itemKey } = req.params;
     const { status, adminNote } = req.body;
     const record = await reviewChecklistItem(id, itemKey, { status, adminNote });
+    logActivity(req, `Pre-employment document reviewed: ${itemKey} - ${status}`, 'pre-employment', id);
     res.status(200).json({ success: true, data: record });
   } catch (error) {
     next(error);
