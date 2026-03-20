@@ -1,36 +1,68 @@
-import express from 'express';
-import { verifyToken } from '../../middleware/auth.js';
-import { getMyTrainingController } from './training.controller.js';
-import TrainingRecord from './training.model.js';
+import express from 'express'
+import { verifyToken, requireRole } from '../../middleware/auth.js'
+import {
+  getMyTrainingController,
+  getAllTrainingController,
+  getTrainingByIdController,
+  createTrainingController,
+  updateTrainingController,
+  deleteTrainingController,
+  markCompleteController,
+  getExpiringController,
+} from './training.controller.js'
 
-const router = express.Router();
+const router = express.Router()
 
-router.get('/my', verifyToken, getMyTrainingController);
+// Employee routes
+router.get('/my', verifyToken, getMyTrainingController)
+
+// Admin routes
 router.get(
-  '/:employeeId',
+  '/expiring',
   verifyToken,
-  async (req, res, next) => {
-    try {
-      const { employeeId } = req.params;
-      // Employee can only see their own records
-      if (req.user.id !== employeeId &&
-          !['admin', 'super-admin', 'hr']
-            .includes(req.user.role)) {
-        return res.status(403).json({
-          error: 'Forbidden',
-        });
-      }
-      const records = await TrainingRecord
-        .find({ employeeId })
-        .sort({ completedAt: -1 })
-        .lean();
-      res.status(200).json({
-        success: true, data: records,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+  requireRole(['admin', 'super-admin', 'hr']),
+  getExpiringController
+)
 
-export default router;
+router.get(
+  '/',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  getAllTrainingController
+)
+
+router.post(
+  '/',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  createTrainingController
+)
+
+router.get(
+  '/:id',
+  verifyToken,
+  getTrainingByIdController
+)
+
+router.patch(
+  '/:id',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  updateTrainingController
+)
+
+router.delete(
+  '/:id',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  deleteTrainingController
+)
+
+router.patch(
+  '/:id/complete',
+  verifyToken,
+  requireRole(['admin', 'super-admin', 'hr']),
+  markCompleteController
+)
+
+export default router

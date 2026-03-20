@@ -25,9 +25,7 @@ export default function EmployeeTraining() {
       try {
         setLoading(true)
         setError('')
-        const res = await api.get(
-          `/training/${user.id}`
-        )
+        const res = await api.get('/training/my')
         setRecords(res.data?.data ?? res.data ?? [])
       } catch (err) {
         setError('Failed to load training records.')
@@ -121,23 +119,23 @@ export default function EmployeeTraining() {
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-b-0"
                 >
                   <td className="px-4 py-3 text-[13px] font-medium text-[#1a3a5c]">
-                    {record.courseName ?? '�'}
+                    {record.courseName ?? 'Ã¢â‚¬â€'}
                   </td>
                   <td className="px-4 py-3 text-[13px] text-gray-700">
-                    {record.provider ?? '�'}
+                    {record.provider ?? 'Ã¢â‚¬â€'}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${STATUS_STYLES[record.status]
                       ?? STATUS_STYLES['in-progress']}`}>
                       {STATUS_LABELS[record.status]
-                        ?? record.status ?? '�'}
+                        ?? record.status ?? 'Ã¢â‚¬â€'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[13px] text-gray-700">
                     {record.completedAt
                       ? new Date(record.completedAt)
                           .toLocaleDateString('en-PH')
-                      : '�'}
+                      : 'Ã¢â‚¬â€'}
                   </td>
                   <td className="px-4 py-3 text-[13px]">
                     {record.expiresAt ? (
@@ -173,7 +171,7 @@ export default function EmployeeTraining() {
                       </a>
                     ) : (
                       <span className="text-[12px] text-gray-400">
-                        �
+                        Ã¢â‚¬â€
                       </span>
                     )}
                   </td>

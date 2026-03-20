@@ -22,6 +22,7 @@ const notificationSchema = new mongoose.Schema(
         'pe_self_rated',
         'pe_completed',
         'training_assigned',
+        'offboarding',
       ],
       required: true,
     },

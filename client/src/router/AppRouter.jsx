@@ -33,6 +33,7 @@ import ActivityLogs from '../pages/admin/AdminActivityLogs';
 import AdminRequests from '../pages/admin/AdminRequests';
 import AdminPreEmployment from '../pages/admin/AdminPreEmployment';
 import AdminPerformance from '../pages/admin/AdminPerformance';
+import AdminOffboarding from '../pages/admin/AdminOffboarding';
 
 // Pages - Employee
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
@@ -165,6 +166,7 @@ export default function AppRouter() {
           <Route path="interviews" element={<Interviews />} />
           <Route path="training" element={<Training />} />
           <Route path="performance" element={<AdminPerformance />} />
+          <Route path="offboarding" element={<AdminOffboarding />} />
           <Route path="reports" element={<Reports />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="admins" element={<AdminList />} />

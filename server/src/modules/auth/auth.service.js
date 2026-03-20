@@ -10,6 +10,8 @@ const createError = (status, message) => {
   return err;
 };
 
+const normalizeEmail = (email) => email?.trim().toLowerCase();
+
 const sanitizeUser = (userDoc) => {
   const user = userDoc.toObject();
 
@@ -44,13 +46,14 @@ const sanitizeUser = (userDoc) => {
  */
 export const signup = async ({ email, password, role = 'employee', ...allFormData }) => {
   try {
+    const normalizedEmail = normalizeEmail(email);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       throw createError(400, 'Invalid email format');
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       throw createError(409, 'Email already registered');
     }
@@ -58,7 +61,7 @@ export const signup = async ({ email, password, role = 'employee', ...allFormDat
     // Create user in Supabase Auth
     const supabase = getSupabaseClient();
     const { data: supabaseData, error: supabaseError } = await supabase.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
       user_metadata: {
@@ -73,13 +76,13 @@ export const signup = async ({ email, password, role = 'employee', ...allFormDat
     // Check if this email was already hired (has applicant record with isEmployee: true)
     // Use case-insensitive regex match
     const applicant = await Applicant.findOne({
-      email: { $regex: new RegExp(`^${email}$`, 'i') },
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') },
       isEmployee: true,
     });
 
     // Create user profile in MongoDB with full payload
     const newUser = new User({
-      email,
+      email: normalizedEmail,
       password, // Hashed in pre-save hook
       role: 'employee',
       supabaseUid: supabaseData?.user?.id,
@@ -90,12 +93,12 @@ export const signup = async ({ email, password, role = 'employee', ...allFormDat
     if (applicant) {
       newUser.isVerified = true;
       newUser.isActive = true;
-      logger.info(`User auto-activated based on applicant hire status: ${email}`);
+      logger.info(`User auto-activated based on applicant hire status: ${normalizedEmail}`);
     } else {
       // Otherwise, account is pending admin approval
       newUser.isVerified = false;
       newUser.isActive = false;
-      logger.info(`New user registered with pending status: ${email}`);
+      logger.info(`New user registered with pending status: ${normalizedEmail}`);
     }
 
     await newUser.save();
@@ -108,7 +111,7 @@ export const signup = async ({ email, password, role = 'employee', ...allFormDat
         role: 'employee',
       });
     }
-    logger.info(`New user registered: ${email}`);
+    logger.info(`New user registered: ${normalizedEmail}`);
 
     // Generate JWT token
     const token = signToken({
@@ -132,8 +135,10 @@ export const signup = async ({ email, password, role = 'employee', ...allFormDat
  */
 export const login = async (email, password) => {
   try {
+    const normalizedEmail = normalizeEmail(email);
+
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       throw createError(401, 'Invalid email or password');
     }
@@ -153,7 +158,7 @@ export const login = async (email, password) => {
       );
     }
 
-    logger.info(`User logged in: ${email}`);
+    logger.info(`User logged in: ${normalizedEmail}`);
 
     // Generate JWT token
     const token = signToken({
@@ -209,13 +214,14 @@ export const logout = async (userId) => {
  */
 export const registerApplicant = async ({ firstName, lastName, email, password }) => {
   try {
-    const existing = await User.findOne({ email });
+    const normalizedEmail = normalizeEmail(email);
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) throw createError(409, 'EMAIL_EXISTS');
 
     // Do NOT call bcrypt.hash here — password is hashed in the User pre-save hook
     const user = await User.create({
       personalInfo: { givenName: firstName, surname: lastName },
-      email,
+      email: normalizedEmail,
       password,
       role: 'applicant',
       isVerified: true,
