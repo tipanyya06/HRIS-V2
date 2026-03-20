@@ -23,6 +23,7 @@ import uploadRouter from './modules/upload/upload.routes.js';
 import announcementsRouter from './modules/announcements/announcements.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import trainingRoutes from './modules/training/training.routes.js';
+import offboardingRouter from './modules/offboarding/offboarding.routes.js';
 import preEmploymentRoutes from './modules/preEmployment/preEmployment.routes.js';
 import { startTrainingExpiryJob } from './jobs/trainingExpiryJob.js';
 
@@ -88,6 +89,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/announcements', announcementsRouter);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/training', trainingRoutes);
+app.use('/api/offboarding', offboardingRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/performance', performanceRouter);
 app.use('/api/admins', adminsRouter);
